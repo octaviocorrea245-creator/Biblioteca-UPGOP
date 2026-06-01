@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prestamo;
-use App\Models\Usuario;
+use App\Models\Alumno;
 use App\Models\Libro;
+use App\Models\Carrera;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -12,147 +13,87 @@ class PrestamoController extends Controller
 {
     public function index()
     {
-        try {
-            $prestamos = Prestamo::with(['usuario', 'libro'])->get();
-            return response()->json($prestamos);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al obtener préstamos'], 500);
-        }
+        $prestamos = Prestamo::with(['alumno', 'libro', 'carrera'])->get();
+        return view('prestamos.index', compact('prestamos'));
+    }
+
+    public function create()
+    {
+        $alumnos  = Alumno::where('estado', 'Activo')->get();
+        $libros   = Libro::where('cantidad_disponible', '>', 0)->get();
+        $carreras = Carrera::where('activa', true)->get();
+        return view('prestamos.create', compact('alumnos', 'libros', 'carreras'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'usuario_id' => 'required|exists:usuarios,id',
-            'libro_id' => 'required|exists:libros,id',
-            'fecha_prestamo' => 'required|date',
-            'dias_prestamo' => 'required|integer|min:1|max:30',
-            'observaciones' => 'nullable|string'
+            'alumno_id'                 => 'required|exists:alumnos,id',
+            'libro_id'                  => 'required|exists:libros,id',
+            'carrera_id'                => 'required|exists:carreras,id',
+            'cuatrimestre'              => 'required|string',
+            'anio'                      => 'required|digits:4',
+            'fecha_prestamo'            => 'required|date',
+            'fecha_devolucion_esperada' => 'required|date|after:fecha_prestamo',
+            'observaciones'             => 'nullable|string',
         ]);
 
-        try {
-            $usuario = Usuario::findOrFail($request->usuario_id);
-            $libro = Libro::findOrFail($request->libro_id);
-
-            // Validaciones de negocio
-            if (!$usuario->puedePrestar()) {
-                return response()->json([
-                    'error' => 'El usuario no puede pedir más préstamos (máximo 3 activos o usuario inactivo)'
-                ], 400);
-            }
-
-            if ($usuario->tienePrestamosVencidos()) {
-                return response()->json([
-                    'error' => 'El usuario tiene préstamos vencidos y no puede pedir más libros'
-                ], 400);
-            }
-
-            if (!$libro->estaDisponible()) {
-                return response()->json([
-                    'error' => 'El libro no está disponible'
-                ], 400);
-            }
-
-            // Calcular fecha de devolución
-            $fechaDevolucion = Carbon::parse($request->fecha_prestamo)
-                ->addDays($request->dias_prestamo);
-
-            $prestamo = Prestamo::create([
-                'usuario_id' => $request->usuario_id,
-                'libro_id' => $request->libro_id,
-                'fecha_prestamo' => $request->fecha_prestamo,
-                'fecha_devolucion_esperada' => $fechaDevolucion,
-                'estado' => 'activo',
-                'observaciones' => $request->observaciones
-            ]);
-
-            // Actualizar disponibilidad del libro
-            $libro->actualizarDisponibilidad();
-
-            return response()->json($prestamo->load(['usuario', 'libro']), 201);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al crear préstamo'], 500);
+        // Verificar que el alumno no sea rezagado
+        $alumno = Alumno::find($request->alumno_id);
+        if ($alumno->estado === 'Rezagado') {
+            return back()->withErrors(['alumno_id' => 'Este alumno está rezagado y no puede realizar préstamos.'])->withInput();
         }
+
+        // Generar folio automático por carrera
+        $folio = Prestamo::siguienteFolio($request->carrera_id);
+
+        // Crear el préstamo
+        Prestamo::create(array_merge($request->all(), ['folio' => $folio]));
+
+        // Descontar disponibilidad del libro
+        $libro = Libro::find($request->libro_id);
+        $libro->decrement('cantidad_disponible');
+
+        return redirect()->route('prestamos.index')->with('success', "Préstamo registrado con folio #$folio.");
     }
 
-    public function show($id)
+    public function show(Prestamo $prestamo)
     {
-        try {
-            $prestamo = Prestamo::with(['usuario', 'libro'])->findOrFail($id);
-            return response()->json($prestamo);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Préstamo no encontrado'], 404);
-        }
+        return view('prestamos.show', compact('prestamo'));
     }
 
-    public function update(Request $request, $id)
+    public function devolver(Prestamo $prestamo)
     {
-        $request->validate([
-            'fecha_devolucion_esperada' => 'nullable|date',
-            'observaciones' => 'nullable|string'
+        if ($prestamo->estado === 'Devuelto') {
+            return back()->with('error', 'Este préstamo ya fue devuelto.');
+        }
+
+        $prestamo->update([
+            'estado'               => 'Devuelto',
+            'fecha_devolucion_real' => now(),
         ]);
 
-        try {
-            $prestamo = Prestamo::findOrFail($id);
+        // Restaurar disponibilidad del libro
+        $prestamo->libro->increment('cantidad_disponible');
 
-            if ($prestamo->estado !== 'activo') {
-                return response()->json([
-                    'error' => 'Solo se pueden modificar préstamos activos'
-                ], 400);
-            }
-
-            $prestamo->update($request->only([
-                'fecha_devolucion_esperada', 'observaciones'
-            ]));
-
-            return response()->json($prestamo->load(['usuario', 'libro']));
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al actualizar préstamo'], 500);
+        // Si el alumno estaba como Deudor, vuelve a Activo
+        if ($prestamo->alumno->estado === 'Deudor') {
+            $prestamo->alumno->update(['estado' => 'Activo']);
         }
+
+        return redirect()->route('prestamos.index')->with('success', 'Devolución registrada correctamente.');
     }
 
-    public function devolver(Request $request, $id)
+    public function destroy(Prestamo $prestamo)
     {
-        $request->validate([
-            'observaciones' => 'nullable|string'
-        ]);
-
-        try {
-            $prestamo = Prestamo::findOrFail($id);
-
-            if ($prestamo->estado !== 'activo') {
-                return response()->json([
-                    'error' => 'El préstamo ya fue devuelto'
-                ], 400);
-            }
-
-            $prestamo->devolver($request->observaciones);
-
-            return response()->json([
-                'message' => 'Libro devuelto correctamente',
-                'prestamo' => $prestamo->load(['usuario', 'libro'])
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al devolver libro'], 500);
-        }
+        $prestamo->libro->increment('cantidad_disponible');
+        $prestamo->delete();
+        return redirect()->route('prestamos.index')->with('success', 'Préstamo eliminado.');
     }
-
-    public function destroy($id)
+    
+    public function vale(Prestamo $prestamo)
     {
-        try {
-            $prestamo = Prestamo::findOrFail($id);
-
-            // Solo permitir eliminar préstamos devueltos
-            if ($prestamo->estado === 'activo') {
-                return response()->json([
-                    'error' => 'No se puede eliminar un préstamo activo. Debe devolverlo primero.'
-                ], 400);
-            }
-
-            $prestamo->delete();
-            return response()->json(['message' => 'Préstamo eliminado correctamente']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al eliminar préstamo'], 500);
-        }
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('prestamos.vale', compact('prestamo'));
+        return $pdf->stream("vale_prestamo_{$prestamo->folio}.pdf");
     }
 }

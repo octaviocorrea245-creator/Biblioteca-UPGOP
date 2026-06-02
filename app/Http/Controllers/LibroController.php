@@ -3,108 +3,70 @@
 namespace App\Http\Controllers;
 
 use App\Models\Libro;
+use App\Models\Carrera;
 use Illuminate\Http\Request;
 
 class LibroController extends Controller
 {
     public function index()
     {
-        try {
-            $libros = Libro::with('prestamosActivos')->get();
-            return response()->json($libros);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al obtener libros'], 500);
-        }
+        $libros = Libro::with('carrera')->get();
+        return view('libros.index', compact('libros'));
+    }
+
+    public function create()
+    {
+        $carreras = Carrera::where('activa', true)->get();
+        return view('libros.create', compact('carreras'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'titulo' => 'required|string|max:255',
-            'autor' => 'required|string|max:255',
-            'genero' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'isbn' => 'nullable|string|unique:libros,isbn',
-            'cantidad_total' => 'required|integer|min:1'
+            'carrera_id'          => 'required|exists:carreras,id',
+            'codigo'              => 'required|string|unique:libros',
+            'tipo'                => 'required|in:Regular,Donado,Adquirido',
+            'titulo'              => 'required|string',
+            'autor'               => 'required|string',
+            'editorial'           => 'required|string',
+            'codigo_barras'       => 'nullable|string',
+            'localizacion'        => 'nullable|string',
+            'cantidad_total'      => 'required|integer|min:1',
+            'cantidad_disponible' => 'required|integer|min:0',
         ]);
 
-        try {
-            $libro = Libro::create([
-                'titulo' => $request->titulo,
-                'autor' => $request->autor,
-                'genero' => $request->genero,
-                'descripcion' => $request->descripcion,
-                'isbn' => $request->isbn,
-                'cantidad_total' => $request->cantidad_total,
-                'cantidad_disponible' => $request->cantidad_total
-            ]);
-
-            return response()->json($libro, 201);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al crear libro'], 500);
-        }
+        Libro::create($request->all());
+        return redirect()->route('libros.index')->with('success', 'Libro registrado correctamente.');
     }
 
-    public function show($id)
+    public function edit(Libro $libro)
     {
-        try {
-            $libro = Libro::with(['prestamos.usuario'])->findOrFail($id);
-            return response()->json($libro);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Libro no encontrado'], 404);
-        }
+        $carreras = Carrera::where('activa', true)->get();
+        return view('libros.edit', compact('libro', 'carreras'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Libro $libro)
     {
         $request->validate([
-            'titulo' => 'required|string|max:255',
-            'autor' => 'required|string|max:255',
-            'genero' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'isbn' => 'nullable|string|unique:libros,isbn,' . $id,
-            'cantidad_total' => 'required|integer|min:1'
+            'carrera_id'          => 'required|exists:carreras,id',
+            'codigo'              => 'required|string|unique:libros,codigo,' . $libro->id,
+            'tipo'                => 'required|in:Regular,Donado,Adquirido',
+            'titulo'              => 'required|string',
+            'autor'               => 'required|string',
+            'editorial'           => 'required|string',
+            'codigo_barras'       => 'nullable|string',
+            'localizacion'        => 'nullable|string',
+            'cantidad_total'      => 'required|integer|min:1',
+            'cantidad_disponible' => 'required|integer|min:0',
         ]);
 
-        try {
-            $libro = Libro::findOrFail($id);
-
-            // Verificar que la nueva cantidad no sea menor a los préstamos activos
-            $prestamosActivos = $libro->prestamosActivos()->count();
-            if ($request->cantidad_total < $prestamosActivos) {
-                return response()->json([
-                    'error' => 'La cantidad total no puede ser menor a los préstamos activos (' . $prestamosActivos . ')'
-                ], 400);
-            }
-
-            $libro->update($request->only([
-                'titulo', 'autor', 'genero', 'descripcion', 'isbn', 'cantidad_total'
-            ]));
-
-            $libro->actualizarDisponibilidad();
-
-            return response()->json($libro);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al actualizar libro'], 500);
-        }
+        $libro->update($request->all());
+        return redirect()->route('libros.index')->with('success', 'Libro actualizado correctamente.');
     }
 
-    public function destroy($id)
+    public function destroy(Libro $libro)
     {
-        try {
-            $libro = Libro::findOrFail($id);
-
-            // Verificar que no tenga prestamos activos
-            if ($libro->prestamosActivos()->count() > 0) {
-                return response()->json([
-                    'error' => 'No se puede eliminar un libro con préstamos activos'
-                ], 400);
-            }
-
-            $libro->delete();
-            return response()->json(['message' => 'Libro eliminado correctamente']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al eliminar libro'], 500);
-        }
+        $libro->delete();
+        return redirect()->route('libros.index')->with('success', 'Libro eliminado.');
     }
 }

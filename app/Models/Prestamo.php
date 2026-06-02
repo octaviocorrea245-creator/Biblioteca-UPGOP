@@ -11,24 +11,33 @@ class Prestamo extends Model
     use HasFactory;
 
     protected $fillable = [
-        'usuario_id',
+        'folio',
+        'carrera_id',
+        'alumno_id',
         'libro_id',
+        'cuatrimestre',
+        'anio',
         'fecha_prestamo',
         'fecha_devolucion_esperada',
         'fecha_devolucion_real',
         'estado',
-        'observaciones'
+        'observaciones',
     ];
 
     protected $casts = [
-        'fecha_prestamo' => 'date',
+        'fecha_prestamo'            => 'date',
         'fecha_devolucion_esperada' => 'date',
-        'fecha_devolucion_real' => 'date'
+        'fecha_devolucion_real'     => 'date',
     ];
 
-    public function usuario()
+    public function carrera()
     {
-        return $this->belongsTo(Usuario::class);
+        return $this->belongsTo(Carrera::class);
+    }
+
+    public function alumno()
+    {
+        return $this->belongsTo(Alumno::class);
     }
 
     public function libro()
@@ -36,34 +45,10 @@ class Prestamo extends Model
         return $this->belongsTo(Libro::class);
     }
 
-    public function estaVencido()
+    // Genera el siguiente folio para una carrera específica
+    public static function siguienteFolio($carrera_id): int
     {
-        return $this->estado === 'activo' &&
-               Carbon::parse($this->fecha_devolucion_esperada)->isPast();
-    }
-
-    public function diasRetraso()
-    {
-        if ($this->estado !== 'activo') {
-            return 0;
-        }
-
-        $fechaLimite = Carbon::parse($this->fecha_devolucion_esperada);
-        $fechaActual = Carbon::now();
-
-        return $fechaLimite->isPast() ? $fechaLimite->diffInDays($fechaActual) : 0;
-    }
-
-    public function devolver($observaciones = null)
-    {
-        $this->fecha_devolucion_real = now()->toDateString();
-        $this->estado = 'devuelto';
-        if ($observaciones) {
-            $this->observaciones = $observaciones;
-        }
-        $this->save();
-
-        // Actualizar disponibilidad del libro
-        $this->libro->actualizarDisponibilidad();
+        $ultimo = self::where('carrera_id', $carrera_id)->max('folio');
+        return $ultimo ? $ultimo + 1 : 1;
     }
 }

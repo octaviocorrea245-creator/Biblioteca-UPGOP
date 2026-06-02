@@ -10,19 +10,27 @@ class Libro extends Model
     use HasFactory;
 
     protected $fillable = [
+        'carrera_id',
+        'codigo',
+        'tipo',
         'titulo',
         'autor',
-        'genero',
-        'descripcion',
-        'isbn',
+        'editorial',
+        'codigo_barras',
+        'localizacion',
         'cantidad_total',
-        'cantidad_disponible'
+        'cantidad_disponible',
     ];
 
     protected $casts = [
-        'cantidad_total' => 'integer',
-        'cantidad_disponible' => 'integer'
+        'cantidad_total'      => 'integer',
+        'cantidad_disponible' => 'integer',
     ];
+
+    public function carrera()
+    {
+        return $this->belongsTo(Carrera::class);
+    }
 
     public function prestamos()
     {
@@ -31,7 +39,7 @@ class Libro extends Model
 
     public function prestamosActivos()
     {
-        return $this->hasMany(Prestamo::class)->where('estado', 'activo');
+        return $this->hasMany(Prestamo::class)->where('estado', 'Activo');
     }
 
     public function estaDisponible()

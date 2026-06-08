@@ -19,7 +19,20 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return view('dashboard', [
+        'totalLibros'          => \App\Models\Libro::count(),
+        'librosDisponibles'    => \App\Models\Libro::where('cantidad_disponible', '>', 0)->count(),
+        'totalAlumnos'         => \App\Models\Alumno::count(),
+        'alumnosActivos'       => \App\Models\Alumno::where('estado', 'Activo')->count(),
+        'prestamosActivos'     => \App\Models\Prestamo::where('estado', 'Activo')->count(),
+        'prestamosVencidos'    => \App\Models\Prestamo::where('estado', 'Vencido')->count(),
+        'deudores'             => \App\Models\Alumno::where('estado', 'Deudor')->count(),
+        'rezagados'            => \App\Models\Alumno::where('estado', 'Rezagado')->count(),
+        'donaciones'           => \App\Models\Donacion::count(),
+        'adquisiciones'        => \App\Models\Adquisicion::count(),
+        'reposicionesPend'     => \App\Models\Reposicion::where('estado_pago', 'Pendiente')->count(),
+        'carreras'             => \App\Models\Carrera::where('activa', true)->count(),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

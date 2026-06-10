@@ -16,6 +16,33 @@
             <div class="mb-4 text-red-600">{{ session('error') }}</div>
         @endif
 
+        {{-- Alertas de préstamos próximos a vencer o vencidos --}}
+        @php
+            $proximos = $prestamos->filter(fn($p) =>
+                $p->estado === 'Activo' &&
+                now()->diffInDays($p->fecha_devolucion_esperada, false) <= 3 &&
+                now()->diffInDays($p->fecha_devolucion_esperada, false) >= 0
+            );
+            $vencidos = $prestamos->filter(fn($p) => strtolower(trim($p->estado)) === 'vencido');
+        @endphp
+
+        @if($vencidos->count() > 0)
+            <div class="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
+                🚨 <strong>{{ $vencidos->count() }} préstamo(s) vencido(s)</strong> — El alumno ha sido marcado como Deudor. Corre el comando de clasificación si aún no lo has hecho.
+            </div>
+        @endif
+
+        @if($proximos->count() > 0)
+            <div class="mb-4 bg-yellow-50 border border-yellow-300 text-yellow-700 px-4 py-3 rounded">
+                ⚠️ <strong>{{ $proximos->count() }} préstamo(s) vencen en los próximos 3 días</strong> — Revisa los préstamos resaltados en amarillo.
+            </div>
+        @endif
+
+        <div class="mb-4">
+            <input type="text" id="buscador" placeholder="Buscar por alumno, libro, folio o carrera..."
+                class="w-full border-gray-300 rounded shadow-sm p-2"
+                onkeyup="buscarEnTabla()">
+        </div>
         <table class="w-full bg-white shadow rounded">
             <thead class="bg-gray-100">
                 <tr>
@@ -32,14 +59,28 @@
             </thead>
             <tbody>
                 @foreach($prestamos as $prestamo)
-                <tr class="border-t">
+                @php
+                    $diasRestantes = now()->diffInDays($prestamo->fecha_devolucion_esperada, false);
+                    $esProximo = strtolower(trim($prestamo->estado)) === 'activo' && $diasRestantes <= 3 && $diasRestantes >= 0;
+                    $esVencido = strtolower(trim($prestamo->estado)) === 'vencido';
+                @endphp
+                <tr class="border-t {{ $esVencido ? 'bg-red-50' : ($esProximo ? 'bg-yellow-50' : '') }}">
                     <td class="p-3">#{{ $prestamo->folio }}</td>
                     <td class="p-3">{{ $prestamo->alumno->nombre }}</td>
                     <td class="p-3">{{ $prestamo->libro->titulo }}</td>
                     <td class="p-3">{{ $prestamo->carrera->nombre }}</td>
                     <td class="p-3">{{ $prestamo->cuatrimestre }}</td>
                     <td class="p-3">{{ $prestamo->fecha_prestamo->format('d/m/Y') }}</td>
-                    <td class="p-3">{{ $prestamo->fecha_devolucion_esperada->format('d/m/Y') }}</td>
+                    <td class="p-3">
+                        {{ $prestamo->fecha_devolucion_esperada->format('d/m/Y') }}
+                        @if($esVencido)
+                            <span class="ml-1 text-xs text-red-600 font-semibold">VENCIDO</span>
+                        @elseif($esProximo)
+                            <span class="ml-1 text-xs text-yellow-600 font-semibold">
+                                Vence en {{ $diasRestantes }} día(s)
+                            </span>
+                        @endif
+                    </td>
                     <td class="p-3">
                         <span class="px-2 py-1 rounded text-sm
                             {{ $prestamo->estado === 'Activo' ? 'bg-blue-100 text-blue-700' : '' }}
@@ -51,7 +92,8 @@
                     <td class="p-3 flex gap-2">
                         <a href="{{ route('prestamos.show', $prestamo) }}"
                            class="bg-blue-400 text-white px-3 py-1 rounded text-sm">Ver</a>
-                           <a href="{{ route('prestamos.vale', $prestamo) }}" class="bg-gray-500 text-white px-3 py-1 rounded text-sm" target="_blank">Vale PDF</a>
+                        <a href="{{ route('prestamos.vale', $prestamo) }}"
+                           class="bg-gray-500 text-white px-3 py-1 rounded text-sm" target="_blank">Vale PDF</a>
                         @if(strtolower(trim($prestamo->estado)) === 'activo')
                         <form action="{{ route('prestamos.devolver', $prestamo) }}" method="POST"
                               onsubmit="return confirm('¿Registrar devolución?')">
@@ -69,5 +111,18 @@
                 @endforeach
             </tbody>
         </table>
+        <div class="mt-4">
+            {{ $prestamos->links() }}
+        </div>
     </div>
+    <script>
+        function buscarEnTabla() {
+            const input = document.getElementById('buscador').value.toLowerCase();
+            const filas = document.querySelectorAll('tbody tr');
+            filas.forEach(fila => {
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
 </x-app-layout>

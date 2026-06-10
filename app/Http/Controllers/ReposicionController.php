@@ -11,7 +11,7 @@ class ReposicionController extends Controller
 {
     public function index()
     {
-        $reposiciones = Reposicion::with(['alumno', 'libro', 'carrera'])->get();
+        $reposiciones = Reposicion::with(['alumno', 'libro', 'carrera'])->paginate(10);
         return view('reposiciones.index', compact('reposiciones'));
     }
 

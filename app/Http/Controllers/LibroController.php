@@ -10,7 +10,7 @@ class LibroController extends Controller
 {
     public function index()
     {
-        $libros = Libro::with('carrera')->get();
+        $libros = Libro::with('carrera')->paginate(10);
         return view('libros.index', compact('libros'));
     }
 

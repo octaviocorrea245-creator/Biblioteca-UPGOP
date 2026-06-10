@@ -16,6 +16,11 @@
          <div class="mb-4 text-red-600">{{ session('error') }}</div>
         @endif
 
+        <div class="mb-4">
+            <input type="text" id="buscador" placeholder="Buscar por alumno o libro..."
+                class="w-full border-gray-300 rounded shadow-sm p-2"
+                onkeyup="buscarEnTabla()">
+        </div>
         <table class="w-full bg-white shadow rounded mt-4">
             <thead class="bg-gray-100">
                 <tr>
@@ -69,5 +74,18 @@
                 @endforeach
             </tbody>
         </table>
+        <div class="mt-4">
+            {{ $reposiciones->links() }}
+        </div>
     </div>
+    <script>
+        function buscarEnTabla() {
+            const input = document.getElementById('buscador').value.toLowerCase();
+            const filas = document.querySelectorAll('tbody tr');
+            filas.forEach(fila => {
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
 </x-app-layout>

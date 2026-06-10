@@ -10,7 +10,7 @@ class AlumnoController extends Controller
 {
     public function index()
     {
-        $alumnos = Alumno::with('carrera')->get();
+        $alumnos = Alumno::with('carrera')->paginate(10);
         return view('alumnos.index', compact('alumnos'));
     }
 

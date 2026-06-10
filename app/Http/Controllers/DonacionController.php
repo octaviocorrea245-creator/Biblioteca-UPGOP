@@ -10,7 +10,7 @@ class DonacionController extends Controller
 {
     public function index()
     {
-        $donaciones = Donacion::with('carrera')->get();
+        $donaciones = Donacion::with('carrera')->paginate(10);
         return view('donaciones.index', compact('donaciones'));
     }
 

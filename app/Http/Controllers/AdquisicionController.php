@@ -10,7 +10,7 @@ class AdquisicionController extends Controller
 {
     public function index()
     {
-        $adquisiciones = Adquisicion::with('carrera')->get();
+        $adquisiciones = Adquisicion::with('carrera')->paginate(10);
         return view('adquisiciones.index', compact('adquisiciones'));
     }
 

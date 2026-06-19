@@ -8,6 +8,10 @@
            class="mb-4 inline-block bg-blue-600 text-white px-4 py-2 rounded">
             + Nuevo Libro
         </a>
+        <a href="{{ route('libros.importar.form') }}"
+        class="mb-4 inline-block bg-green-600 text-white px-4 py-2 rounded ml-2">
+            📊 Carga Masiva Excel
+        </a>
 
         @if(session('success'))
             <div class="mb-4 text-green-600">{{ session('success') }}</div>
@@ -28,6 +32,7 @@
                     <th class="p-3 text-left">Tipo</th>
                     <th class="p-3 text-left">Carrera</th>
                     <th class="p-3 text-left">Disponibles</th>
+                    <th class="p-3 text-left">Costo</th>
                     <th class="p-3 text-left">Acciones</th>
                 </tr>
             </thead>
@@ -47,6 +52,7 @@
                     </td>
                     <td class="p-3">{{ $libro->carrera->nombre }}</td>
                     <td class="p-3">{{ $libro->cantidad_disponible }} / {{ $libro->cantidad_total }}</td>
+                    <td class="p-3">{{ $libro->costo ? '$' . number_format($libro->costo, 2) : '—' }}</td>
                     <td class="p-3 flex gap-2">
                         <a href="{{ route('libros.edit', $libro) }}"
                            class="bg-yellow-400 text-white px-3 py-1 rounded text-sm">Editar</a>

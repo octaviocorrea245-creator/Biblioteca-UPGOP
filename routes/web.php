@@ -43,6 +43,9 @@ Route::middleware('auth')->group(function () {
 
 Route::resource('carreras', CarreraController::class);
 Route::resource('alumnos', AlumnoController::class);
+Route::get('libros/importar', [LibroController::class, 'importarForm'])->name('libros.importar.form');
+Route::post('libros/importar', [LibroController::class, 'importar'])->name('libros.importar');
+Route::get('libros/plantilla-excel', [LibroController::class, 'plantilla'])->name('libros.plantilla');
 Route::resource('libros', LibroController::class);
 Route::resource('prestamos', PrestamoController::class);
 Route::patch('prestamos/{prestamo}/devolver', [PrestamoController::class, 'devolver'])->name('prestamos.devolver');
@@ -57,10 +60,17 @@ Route::get('reportes/deudores', [ReporteController::class, 'deudores'])->name('r
 Route::get('reportes/rezagados', [ReporteController::class, 'rezagados'])->name('reportes.rezagados');
 Route::get('reportes/donaciones', [ReporteController::class, 'donaciones'])->name('reportes.donaciones');
 Route::get('reportes/adquisiciones', [ReporteController::class, 'adquisiciones'])->name('reportes.adquisiciones');
+Route::get('reportes/prestamos-mensuales-excel', [ReporteController::class, 'prestamosMensualesExcel'])->name('reportes.prestamensuales.excel');
+Route::get('reportes/deudores-excel', [ReporteController::class, 'deudoresExcel'])->name('reportes.deudores.excel');
+Route::get('reportes/rezagados-excel', [ReporteController::class, 'rezagadosExcel'])->name('reportes.rezagados.excel');
+Route::get('reportes/donaciones-excel', [ReporteController::class, 'donacionesExcel'])->name('reportes.donaciones.excel');
+Route::get('reportes/adquisiciones-excel', [ReporteController::class, 'adquisicionesExcel'])->name('reportes.adquisiciones.excel');
 
 Route::resource('reposiciones', ReposicionController::class)->parameters([
     'reposiciones' => 'reposicion'
-]);Route::patch('reposiciones/{reposicion}/pago', [ReposicionController::class, 'registrarPago'])->name('reposiciones.pago');
+]);
+Route::post('reposiciones/importar', [ReposicionController::class, 'importar'])->name('reposiciones.importar');
+Route::patch('reposiciones/{reposicion}/pago', [ReposicionController::class, 'registrarPago'])->name('reposiciones.pago');
 Route::get('reposiciones/{reposicion}/comprobante', [ReposicionController::class, 'comprobante'])->name('reposiciones.comprobante');
 
 Route::get('prestamos/{prestamo}/vale', [PrestamoController::class, 'vale'])->name('prestamos.vale');

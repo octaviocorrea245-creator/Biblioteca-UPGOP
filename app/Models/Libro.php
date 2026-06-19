@@ -20,6 +20,7 @@ class Libro extends Model
         'localizacion',
         'cantidad_total',
         'cantidad_disponible',
+        'costo',
     ];
 
     protected $casts = [

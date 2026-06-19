@@ -6,6 +6,7 @@ use App\Models\Reposicion;
 use App\Models\Prestamo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ReposicionController extends Controller
 {
@@ -75,6 +76,94 @@ class ReposicionController extends Controller
     {
         $pdf = Pdf::loadView('reposiciones.comprobante', compact('reposicion'));
         return $pdf->stream("comprobante_reposicion_{$reposicion->id}.pdf");
+    }
+
+    public function importar(Request $request)
+    {
+        $request->validate([
+            'xml_file' => 'required|file|mimes:xml,txt',
+        ]);
+
+        $content = file_get_contents($request->file('xml_file')->getRealPath());
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NOCDATA);
+
+        if (!$xml) {
+            return redirect()->route('reposiciones.index')
+                ->with('error', 'El archivo XML no es válido.');
+        }
+
+        $items = [];
+        if (isset($xml->reposicion)) {
+            $items = $xml->reposicion;
+        } elseif ($xml->getName() === 'reposicion') {
+            $items = [$xml];
+        } elseif ($xml->children()) {
+            $items = $xml->children();
+        }
+
+        $created = 0;
+        $errors = [];
+
+        foreach ($items as $index => $item) {
+            $data = [
+                'prestamo_id'   => trim((string) ($item->prestamo_id ?? '')),
+                'tipo'          => trim((string) ($item->tipo ?? '')),
+                'monto'         => trim((string) ($item->monto ?? '')),
+                'fecha_reporte' => trim((string) ($item->fecha_reporte ?? '')),
+                'observaciones' => trim((string) ($item->observaciones ?? '')),
+            ];
+
+            $validator = Validator::make($data, [
+                'prestamo_id'   => 'required|integer|exists:prestamos,id',
+                'tipo'          => 'required|in:Perdida,Daño',
+                'monto'         => 'required|numeric|min:0',
+                'fecha_reporte' => 'required|date',
+                'observaciones' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = 'Fila ' . ($index + 1) . ': ' . implode('; ', $validator->errors()->all());
+                continue;
+            }
+
+            $prestamo = Prestamo::with(['alumno', 'libro', 'carrera'])->find($data['prestamo_id']);
+            if (!$prestamo) {
+                $errors[] = "Fila " . ($index + 1) . ": El préstamo {$data['prestamo_id']} no existe.";
+                continue;
+            }
+
+            $duplicate = Reposicion::where('prestamo_id', $prestamo->id)->exists();
+            if ($duplicate) {
+                $errors[] = "Fila " . ($index + 1) . ": Ya existe una reposición para el préstamo {$prestamo->id}.";
+                continue;
+            }
+
+            Reposicion::create([
+                'prestamo_id'   => $prestamo->id,
+                'alumno_id'     => $prestamo->alumno_id,
+                'libro_id'      => $prestamo->libro_id,
+                'carrera_id'    => $prestamo->carrera_id,
+                'tipo'          => $data['tipo'],
+                'monto'         => $data['monto'],
+                'estado_pago'   => 'Pendiente',
+                'fecha_reporte' => $data['fecha_reporte'],
+                'observaciones' => $data['observaciones'] ?: null,
+            ]);
+
+            if ($prestamo->estado === 'Activo') {
+                $prestamo->update(['estado' => 'Vencido']);
+            }
+
+            $created++;
+        }
+
+        $message = "Se importaron {$created} reposiciones.";
+        if (count($errors)) {
+            $message .= ' Algunos registros no se guardaron: ' . implode(' | ', $errors);
+        }
+
+        return redirect()->route('reposiciones.index')->with('success', $message);
     }
 
     public function destroy(Reposicion $reposicion)

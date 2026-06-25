@@ -17,11 +17,11 @@
             <div class="mb-4 text-green-600">{{ session('success') }}</div>
         @endif
 
-        <div class="mb-4">
-            <input type="text" id="buscador" placeholder="Buscar por título, autor, código o carrera..."
-                class="w-full border-gray-300 rounded shadow-sm p-2"
-                onkeyup="buscarEnTabla()">
-        </div>
+        <form method="GET" action="{{ route('libros.index') }}" class="mb-4">
+            <input type="text" name="buscar" value="{{ request('buscar') }}"
+            placeholder="Buscar por título, autor, código o código de barras... (Enter para buscar)"
+            class="w-full border-gray-300 rounded shadow-sm p-2">
+        </form>
 
         <table class="w-full bg-white shadow rounded">
             <thead class="bg-gray-100">
@@ -70,14 +70,4 @@
             {{ $libros->links() }}
         </div>
     </div>
-    <script>
-        function buscarEnTabla() {
-            const input = document.getElementById('buscador').value.toLowerCase();
-            const filas = document.querySelectorAll('tbody tr');
-            filas.forEach(fila => {
-                const texto = fila.innerText.toLowerCase();
-                fila.style.display = texto.includes(input) ? '' : 'none';
-            });
-        }
-    </script>
 </x-app-layout>

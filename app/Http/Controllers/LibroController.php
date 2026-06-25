@@ -8,9 +8,22 @@ use Illuminate\Http\Request;
 
 class LibroController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $libros = Libro::with('carrera')->paginate(10);
+        $query = Libro::with('carrera');
+
+        if ($request->filled('buscar')) {
+            $buscar = $request->buscar;
+            $query->where(function($q) use ($buscar) {
+                $q->where('titulo', 'like', "%{$buscar}%")
+                ->orWhere('autor', 'like', "%{$buscar}%")
+                ->orWhere('codigo', 'like', "%{$buscar}%")
+                ->orWhere('codigo_barras', 'like', "%{$buscar}%")
+                ->orWhere('editorial', 'like', "%{$buscar}%");
+            });
+        }
+
+        $libros = $query->paginate(10)->withQueryString();
         return view('libros.index', compact('libros'));
     }
 
@@ -81,46 +94,88 @@ class LibroController extends Controller
     public function importar(\Illuminate\Http\Request $request)
     {
         $request->validate([
-            'archivo'    => 'required|mimes:xlsx,xls,csv',
-            'carrera_id' => 'nullable|exists:carreras,id',
+            'archivo' => 'required|mimes:xlsx,xls,csv',
+            'hoja'    => 'nullable|string',
         ]);
 
         $archivo = $request->file('archivo');
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo->getPathname());
-        $hoja = $spreadsheet->getActiveSheet();
-        $filas = $hoja->toArray();
 
-        array_shift($filas);
+        if ($request->hoja) {
+            $hoja = $spreadsheet->getSheetByName($request->hoja);
+            if (!$hoja) {
+                return back()->withErrors(['hoja' => "No se encontró la hoja '{$request->hoja}' en el archivo."]);
+            }
+        } else {
+            $hoja = $spreadsheet->getActiveSheet();
+        }
+
+        $filas = $hoja->toArray();
+        array_shift($filas); // quitar encabezados
 
         $insertados = 0;
-        $errores = [];
+        $omitidos   = 0;
+        $errores    = [];
+        $carrerasCreadas = [];
 
         foreach ($filas as $i => $fila) {
-            // Columnas: codigo_barras, tipo, titulo, autor, editorial, localizacion, cantidad_total, cantidad_disponible, costo
-            if (empty($fila[0]) || empty($fila[2])) {
+            // Columnas reales: CARRERA, CANT, TITULO, LOC, AUTOR, EDITORIAL, OBSERV., CODIGO_BARRAS, PROVEEDOR
+            $claveCarrera   = trim($fila[0] ?? '');
+            $cantidad       = $fila[1] ?? 1;
+            $titulo         = trim($fila[2] ?? '');
+            $localizacion   = trim($fila[3] ?? '');
+            $autor          = trim($fila[4] ?? '');
+            $editorial      = trim($fila[5] ?? '');
+            $observacion    = trim($fila[6] ?? '');
+            $codigoBarras   = trim($fila[7] ?? '');
+            $proveedor      = trim($fila[8] ?? '');
+
+            // Saltar filas vacías o sin título
+            // Saltar solo si no hay título (fila realmente vacía)
+            if (empty($titulo)) {
                 continue;
             }
 
-            $codigoBarras = trim($fila[0]);
+            // Si no tiene código de barras, generamos uno interno temporal
+            if (empty($codigoBarras)) {
+                $codigoBarras = 'SIN-CB-' . str_pad($i + 2, 5, '0', STR_PAD_LEFT);
+            }
 
+            // Evitar duplicados por código de barras
             if (\App\Models\Libro::where('codigo_barras', $codigoBarras)->exists()) {
-                $errores[] = "Fila " . ($i + 2) . ": código de barras {$codigoBarras} ya existe, omitido.";
+                $omitidos++;
                 continue;
+            }
+
+            // Buscar o crear la carrera según la clave del Excel
+            $carrera_id = null;
+            if (!empty($claveCarrera)) {
+                $carrera = \App\Models\Carrera::where('clave', $claveCarrera)->first();
+
+                if (!$carrera) {
+                    $carrera = \App\Models\Carrera::create([
+                        'clave'  => $claveCarrera,
+                        'nombre' => $claveCarrera, // se puede editar después desde el módulo de Carreras
+                        'activa' => true,
+                    ]);
+                    $carrerasCreadas[] = $claveCarrera;
+                }
+
+                $carrera_id = $carrera->id;
             }
 
             try {
                 \App\Models\Libro::create([
-                    'carrera_id'          => $request->carrera_id ?: null,
+                    'carrera_id'          => $carrera_id,
                     'codigo'              => 'LIB-' . $codigoBarras,
-                    'tipo'                => in_array($fila[1], ['Regular', 'Donado', 'Adquirido']) ? $fila[1] : 'Regular',
-                    'titulo'              => $fila[2],
-                    'autor'               => $fila[3] ?? 'Sin autor',
-                    'editorial'           => $fila[4] ?? 'Sin editorial',
+                    'tipo'                => 'Regular',
+                    'titulo'              => $titulo,
+                    'autor'               => $autor ?: 'Sin autor',
+                    'editorial'           => $editorial ?: 'Sin editorial',
                     'codigo_barras'       => $codigoBarras,
-                    'localizacion'        => $fila[5] ?? null,
-                    'cantidad_total'      => $fila[6] ?? 1,
-                    'cantidad_disponible' => $fila[7] ?? ($fila[6] ?? 1),
-                    'costo'               => $fila[8] ?? null,
+                    'localizacion'        => $localizacion ?: null,
+                    'cantidad_total'      => is_numeric($cantidad) ? $cantidad : 1,
+                    'cantidad_disponible' => is_numeric($cantidad) ? $cantidad : 1,
                 ]);
                 $insertados++;
             } catch (\Exception $e) {
@@ -129,9 +184,21 @@ class LibroController extends Controller
         }
 
         $mensaje = "$insertados libros importados correctamente.";
-        if (count($errores) > 0) {
-            $mensaje .= " " . count($errores) . " filas con observaciones.";
+        if ($omitidos > 0) {
+            $mensaje .= " $omitidos omitidos por código de barras duplicado.";
         }
+        if (count($carrerasCreadas) > 0) {
+            $mensaje .= " Carreras creadas automáticamente: " . implode(', ', array_unique($carrerasCreadas)) . ".";
+        }
+        if (count($errores) > 0) {
+            $mensaje .= " " . count($errores) . " filas con error.";
+        }
+        \Log::info('Importación de libros - Detalle', [
+            'insertados' => $insertados,
+            'omitidos_duplicados' => $omitidos,
+            'errores' => $errores,
+            'carreras_creadas' => $carrerasCreadas,
+        ]);
 
         return redirect()->route('libros.index')->with('success', $mensaje);
     }

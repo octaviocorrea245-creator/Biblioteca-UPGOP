@@ -22,15 +22,9 @@
             <form method="POST" action="{{ route('libros.importar') }}" enctype="multipart/form-data" class="mt-4">
                 @csrf
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Carrera (opcional)</label>
-                     <select name="carrera_id" class="mt-1 block w-full border-gray-300 rounded shadow-sm">
-                        <option value="">-- Sin carrera específica --</option>
-                        @foreach($carreras as $carrera)
-                            <option value="{{ $carrera->id }}">{{ $carrera->nombre }}</option>
-                        @endforeach
-                     </select>
-                </div>
+            <p class="text-sm text-blue-600 mb-4">
+                ℹ️ La carrera se detecta automáticamente desde la columna CARRERA del Excel. Si la clave no existe en el sistema, se creará automáticamente (podrás editar su nombre completo después desde el módulo de Carreras).
+            </p>
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">Archivo Excel (.xlsx, .xls, .csv)</label>

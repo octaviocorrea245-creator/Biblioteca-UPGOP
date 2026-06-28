@@ -32,7 +32,7 @@
                     <th class="p-3 text-left">Tipo</th>
                     <th class="p-3 text-left">Carrera</th>
                     <th class="p-3 text-left">Disponibles</th>
-                    <th class="p-3 text-left">Costo</th>
+                    <th class="p-3 text-left">Localización</th>
                     <th class="p-3 text-left">Acciones</th>
                 </tr>
             </thead>
@@ -52,8 +52,7 @@
                     </td>
                     <td class="p-3">{{ $libro->carrera->nombre }}</td>
                     <td class="p-3">{{ $libro->cantidad_disponible }} / {{ $libro->cantidad_total }}</td>
-                    <td class="p-3">{{ $libro->costo ? '$' . number_format($libro->costo, 2) : '—' }}</td>
-                    <td class="p-3 flex gap-2">
+                    <td class="p-3">{{ $libro->localizacion ?: '—' }}</td>                    <td class="p-3 flex gap-2">
                         <a href="{{ route('libros.edit', $libro) }}"
                            class="bg-yellow-400 text-white px-3 py-1 rounded text-sm">Editar</a>
                         <form action="{{ route('libros.destroy', $libro) }}" method="POST"

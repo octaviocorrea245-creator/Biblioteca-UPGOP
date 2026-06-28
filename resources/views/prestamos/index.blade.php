@@ -60,7 +60,7 @@
             <tbody>
                 @foreach($prestamos as $prestamo)
                 @php
-                    $diasRestantes = now()->diffInDays($prestamo->fecha_devolucion_esperada, false);
+                    $diasRestantes = now()->startOfDay()->diffInDays($prestamo->fecha_devolucion_esperada->startOfDay(), false);
                     $esProximo = strtolower(trim($prestamo->estado)) === 'activo' && $diasRestantes <= 3 && $diasRestantes >= 0;
                     $esVencido = strtolower(trim($prestamo->estado)) === 'vencido';
                 @endphp
@@ -72,21 +72,30 @@
                     <td class="p-3">{{ $prestamo->cuatrimestre }}</td>
                     <td class="p-3">{{ $prestamo->fecha_prestamo->format('d/m/Y') }}</td>
                     <td class="p-3">
-                        {{ $prestamo->fecha_devolucion_esperada->format('d/m/Y') }}
+                        <div>{{ $prestamo->fecha_devolucion_esperada->format('d/m/Y') }}</div>
                         @if($esVencido)
-                            <span class="ml-1 text-xs text-red-600 font-semibold">VENCIDO</span>
+                            <div class="text-xs text-red-600 font-semibold mt-1">VENCIDO</div>
                         @elseif($esProximo)
-                            <span class="ml-1 text-xs text-yellow-600 font-semibold">
-                                Vence en {{ $diasRestantes }} día(s)
-                            </span>
+                            <div class="text-xs text-yellow-600 font-semibold mt-1">
+                                @if($diasRestantes == 0)
+                                    Vence hoy
+                                @elseif($diasRestantes == 1)
+                                    Vence mañana
+                                @else
+                                    Vence en {{ $diasRestantes }} días
+                                @endif
+                            </div>
                         @endif
                     </td>
                     <td class="p-3">
+                        @php
+                            $estadoLower = strtolower(trim($prestamo->estado));
+                        @endphp
                         <span class="px-2 py-1 rounded text-sm
-                            {{ $prestamo->estado === 'Activo' ? 'bg-blue-100 text-blue-700' : '' }}
-                            {{ $prestamo->estado === 'Devuelto' ? 'bg-green-100 text-green-700' : '' }}
-                            {{ $prestamo->estado === 'Vencido' ? 'bg-red-100 text-red-700' : '' }}">
-                            {{ $prestamo->estado }}
+                            {{ $estadoLower === 'activo' ? 'bg-green-100 text-green-700' : '' }}
+                            {{ $estadoLower === 'devuelto' ? 'bg-blue-100 text-blue-700' : '' }}
+                            {{ $estadoLower === 'vencido' ? 'bg-red-100 text-red-700' : '' }}">
+                            {{ ucfirst(strtolower($prestamo->estado)) }}
                         </span>
                     </td>
                     <td class="p-3 flex gap-2">

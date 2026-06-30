@@ -22,22 +22,22 @@ class AdquisicionController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'    => 'required|exists:carreras,id',
             'cantidad'      => 'required|integer|min:1',
-            'titulo'        => 'required|string',
-            'autor'         => 'required|string',
-            'editorial'     => 'required|string',
-            'localizacion'  => 'nullable|string',
-            'observacion'   => 'nullable|string',
-            'codigo_barras' => 'nullable|string',
-            'proveedor'     => 'required|string',
-            'factura'       => 'required|string',
+            'titulo'        => 'required|string|max:255',
+            'autor'         => 'required|string|max:255',
+            'editorial'     => 'required|string|max:255',
+            'localizacion'  => 'nullable|string|max:100',
+            'observacion'   => 'nullable|string|max:500',
+            'codigo_barras' => 'nullable|string|max:100',
+            'proveedor'     => 'required|string|max:255',
+            'factura'       => 'required|string|max:50',
             'fecha_factura' => 'required|date',
             'costo'         => 'required|numeric|min:0',
         ]);
 
-        Adquisicion::create($request->all());
+        Adquisicion::create($validated);
         return redirect()->route('adquisiciones.index')->with('success', 'Adquisición registrada correctamente.');
     }
 
@@ -49,22 +49,22 @@ class AdquisicionController extends Controller
 
     public function update(Request $request, Adquisicion $adquisicion)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'    => 'required|exists:carreras,id',
             'cantidad'      => 'required|integer|min:1',
-            'titulo'        => 'required|string',
-            'autor'         => 'required|string',
-            'editorial'     => 'required|string',
-            'localizacion'  => 'nullable|string',
-            'observacion'   => 'nullable|string',
-            'codigo_barras' => 'nullable|string',
-            'proveedor'     => 'required|string',
-            'factura'       => 'required|string',
+            'titulo'        => 'required|string|max:255',
+            'autor'         => 'required|string|max:255',
+            'editorial'     => 'required|string|max:255',
+            'localizacion'  => 'nullable|string|max:100',
+            'observacion'   => 'nullable|string|max:500',
+            'codigo_barras' => 'nullable|string|max:100',
+            'proveedor'     => 'required|string|max:255',
+            'factura'       => 'required|string|max:50',
             'fecha_factura' => 'required|date',
             'costo'         => 'required|numeric|min:0',
         ]);
 
-        $adquisicion->update($request->all());
+        $adquisicion->update($validated);
         return redirect()->route('adquisiciones.index')->with('success', 'Adquisición actualizada correctamente.');
     }
 

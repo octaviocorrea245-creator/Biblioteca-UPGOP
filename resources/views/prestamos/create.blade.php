@@ -19,6 +19,12 @@
                 @error('alumno_id') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
             </div>
             <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">📷 Escanear código de barras (opcional)</label>
+                <input type="text" id="escanerCodigoBarras" placeholder="Da clic aquí y escanea el libro..."
+                    class="mt-1 block w-full border-blue-300 rounded shadow-sm p-2 bg-blue-50">
+                <p id="mensajeEscaneo" class="text-sm mt-1"></p>
+            </div>
+            <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700">Libro</label>
                 <select name="libro_id" class="mt-1 block w-full border-gray-300 rounded shadow-sm">
                     <option value="">-- Selecciona --</option>
@@ -77,4 +83,34 @@
             <a href="{{ route('prestamos.index') }}" class="ml-3 text-gray-600">Cancelar</a>
         </form>
     </div>
+    <script>
+    document.getElementById('escanerCodigoBarras').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const codigo = this.value.trim();
+            if (!codigo) return;
+
+            fetch(`{{ route('libros.buscarPorCodigoBarras') }}?codigo_barras=${encodeURIComponent(codigo)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const mensaje = document.getElementById('mensajeEscaneo');
+                    const select = document.querySelector('select[name="libro_id"]');
+
+                    if (data.encontrado) {
+                        select.value = data.id;
+                        mensaje.className = 'text-sm mt-1 text-green-600';
+                        mensaje.textContent = `✅ Libro encontrado: ${data.titulo} (${data.disponible} disponibles)`;
+                    } else {
+                        mensaje.className = 'text-sm mt-1 text-red-600';
+                        mensaje.textContent = '❌ No se encontró un libro disponible con ese código de barras.';
+                    }
+
+                    this.value = '';
+                })
+                .catch(() => {
+                    document.getElementById('mensajeEscaneo').textContent = '⚠️ Error al buscar el libro.';
+                });
+        }
+    });
+    </script>
 </x-app-layout>

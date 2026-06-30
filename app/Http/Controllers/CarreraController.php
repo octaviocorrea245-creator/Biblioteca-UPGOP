@@ -20,12 +20,13 @@ class CarreraController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|string|unique:carreras',
-            'clave'  => 'required|string|unique:carreras',
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255|unique:carreras',
+            'clave'  => 'required|string|max:20|unique:carreras',
+            'activa' => 'required|boolean',
         ]);
 
-        Carrera::create($request->all());
+        Carrera::create($validated);
         return redirect()->route('carreras.index')->with('success', 'Carrera registrada correctamente.');
     }
 
@@ -36,12 +37,13 @@ class CarreraController extends Controller
 
     public function update(Request $request, Carrera $carrera)
     {
-        $request->validate([
-            'nombre' => 'required|string|unique:carreras,nombre,' . $carrera->id,
-            'clave'  => 'required|string|unique:carreras,clave,' . $carrera->id,
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255|unique:carreras,nombre,' . $carrera->id,
+            'clave'  => 'required|string|max:20|unique:carreras,clave,' . $carrera->id,
+            'activa' => 'required|boolean',
         ]);
 
-        $carrera->update($request->all());
+        $carrera->update($validated);
         return redirect()->route('carreras.index')->with('success', 'Carrera actualizada correctamente.');
     }
 

@@ -22,17 +22,17 @@ class AlumnoController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre'      => 'required|string',
-            'matricula'   => 'required|string|unique:alumnos',
-            'carrera_id'  => 'required|exists:carreras,id',
-            'genero'      => 'required|in:M,F,Otro',
-            'cuatrimestre'=> 'required|integer|min:1|max:12',
-            'turno'       => 'required|in:M,V,N',
-            'generacion'  => 'required|digits:4',
+        $validated = $request->validate([
+            'nombre'       => 'required|string|max:255',
+            'matricula'    => 'required|string|max:20|unique:alumnos',
+            'carrera_id'   => 'required|exists:carreras,id',
+            'genero'       => 'required|in:M,F,Otro',
+            'cuatrimestre' => 'required|integer|min:1|max:12',
+            'turno'        => 'required|in:M,V,N',
+            'generacion'   => 'required|digits:4',
         ]);
 
-        Alumno::create($request->all());
+        Alumno::create($validated);
         return redirect()->route('alumnos.index')->with('success', 'Alumno registrado correctamente.');
     }
 
@@ -44,17 +44,18 @@ class AlumnoController extends Controller
 
     public function update(Request $request, Alumno $alumno)
     {
-        $request->validate([
-            'nombre'      => 'required|string',
-            'matricula'   => 'required|string|unique:alumnos,matricula,' . $alumno->id,
-            'carrera_id'  => 'required|exists:carreras,id',
-            'genero'      => 'required|in:M,F,Otro',
-            'cuatrimestre'=> 'required|integer|min:1|max:12',
-            'turno'       => 'required|in:M,V,N',
-            'generacion'  => 'required|digits:4',
+        $validated = $request->validate([
+            'nombre'       => 'required|string|max:255',
+            'matricula'    => 'required|string|max:20|unique:alumnos,matricula,' . $alumno->id,
+            'carrera_id'   => 'required|exists:carreras,id',
+            'genero'       => 'required|in:M,F,Otro',
+            'cuatrimestre' => 'required|integer|min:1|max:12',
+            'turno'        => 'required|in:M,V,N',
+            'generacion'   => 'required|digits:4',
+            'estado' => 'required|in:Activo,Deudor,Rezagado',
         ]);
 
-        $alumno->update($request->all());
+        $alumno->update($validated);
         return redirect()->route('alumnos.index')->with('success', 'Alumno actualizado correctamente.');
     }
 

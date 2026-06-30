@@ -46,12 +46,19 @@ Route::resource('alumnos', AlumnoController::class);
 Route::get('libros/importar', [LibroController::class, 'importarForm'])->name('libros.importar.form');
 Route::post('libros/importar', [LibroController::class, 'importar'])->name('libros.importar');
 Route::get('libros/plantilla-excel', [LibroController::class, 'plantilla'])->name('libros.plantilla');
+Route::get('libros/pendientes-codigo-barras', [LibroController::class, 'pendientesCodigoBarras'])->name('libros.pendientes');
+Route::patch('libros/{libro}/actualizar-codigo-barras', [LibroController::class, 'actualizarCodigoBarras'])->name('libros.actualizarCodigoBarras');
+Route::get('libros/buscar-por-codigo-barras', [LibroController::class, 'buscarPorCodigoBarras'])->name('libros.buscarPorCodigoBarras');
 Route::resource('libros', LibroController::class);
 Route::resource('prestamos', PrestamoController::class);
 Route::patch('prestamos/{prestamo}/devolver', [PrestamoController::class, 'devolver'])->name('prestamos.devolver');
 Route::get('deudores', [DeudorController::class, 'index'])->name('deudores.index');
-Route::resource('donaciones', DonacionController::class);
-Route::resource('adquisiciones', AdquisicionController::class);
+Route::resource('donaciones', DonacionController::class)->parameters([
+    'donaciones' => 'donacion'
+]);
+Route::resource('adquisiciones', AdquisicionController::class)->parameters([
+    'adquisiciones' => 'adquisicion'
+]);
 
 Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
 Route::get('reportes/prestamos-mensuales', [ReporteController::class, 'prestamensuales'])->name('reportes.prestamensuales');

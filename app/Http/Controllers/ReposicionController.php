@@ -25,32 +25,32 @@ class ReposicionController extends Controller
         return view('reposiciones.create', compact('prestamos'));
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'prestamo_id'   => 'required|exists:prestamos,id',
             'tipo'          => 'required|in:Perdida,Daño',
             'monto'         => 'required|numeric|min:0',
             'fecha_reporte' => 'required|date',
-            'observaciones' => 'nullable|string',
+            'observaciones' => 'nullable|string|max:500',
         ]);
 
-        $prestamo = Prestamo::with(['alumno', 'libro', 'carrera'])->find($request->prestamo_id);
+        $prestamo = Prestamo::with(['alumno', 'libro', 'carrera'])->find($validated['prestamo_id']);
 
         Reposicion::create([
             'prestamo_id'   => $prestamo->id,
             'alumno_id'     => $prestamo->alumno_id,
             'libro_id'      => $prestamo->libro_id,
             'carrera_id'    => $prestamo->carrera_id,
-            'tipo'          => $request->tipo,
-            'monto'         => $request->monto,
+            'tipo'          => $validated['tipo'],
+            'monto'         => $validated['monto'],
             'estado_pago'   => 'Pendiente',
-            'fecha_reporte' => $request->fecha_reporte,
-            'observaciones' => $request->observaciones,
+            'fecha_reporte' => $validated['fecha_reporte'],
+            'observaciones' => $validated['observaciones'] ?? null,
         ]);
 
         // Marcar préstamo como Vencido si estaba Activo
-        if ($prestamo->estado === 'Activo') {
+        if (strtolower(trim($prestamo->estado)) === 'activo') {
             $prestamo->update(['estado' => 'Vencido']);
         }
 
@@ -65,7 +65,8 @@ class ReposicionController extends Controller
         ]);
 
         // Si el alumno era Deudor o Rezagado, vuelve a Activo
-        if (in_array($reposicion->alumno->estado, ['Deudor', 'Rezagado'])) {
+        $estadoAlumno = strtolower(trim($reposicion->alumno->estado));
+        if (in_array($estadoAlumno, ['deudor', 'rezagado'])) {
             $reposicion->alumno->update(['estado' => 'Activo']);
         }
 
@@ -81,12 +82,21 @@ class ReposicionController extends Controller
     public function importar(Request $request)
     {
         $request->validate([
-            'xml_file' => 'required|file|mimes:xml,txt',
+            'xml_file' => 'required|file|mimes:xml,txt|max:2048',
         ]);
 
         $content = file_get_contents($request->file('xml_file')->getRealPath());
+
+        // Protección XXE: deshabilitar la carga de entidades externas antes de parsear
+        $previousSetting = libxml_disable_entity_loader(true);
         libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NOCDATA);
+
+        // LIBXML_NONET evita que el parser intente hacer peticiones de red
+        // No se usa LIBXML_NOENT para no expandir entidades manualmente
+        $xml = simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NONET);
+
+        libxml_disable_entity_loader($previousSetting);
+        libxml_clear_errors();
 
         if (!$xml) {
             return redirect()->route('reposiciones.index')
@@ -111,7 +121,7 @@ class ReposicionController extends Controller
                 'tipo'          => trim((string) ($item->tipo ?? '')),
                 'monto'         => trim((string) ($item->monto ?? '')),
                 'fecha_reporte' => trim((string) ($item->fecha_reporte ?? '')),
-                'observaciones' => trim((string) ($item->observaciones ?? '')),
+                'observaciones' => \Illuminate\Support\Str::limit(strip_tags(trim((string) ($item->observaciones ?? ''))), 500, ''),
             ];
 
             $validator = Validator::make($data, [
@@ -119,7 +129,7 @@ class ReposicionController extends Controller
                 'tipo'          => 'required|in:Perdida,Daño',
                 'monto'         => 'required|numeric|min:0',
                 'fecha_reporte' => 'required|date',
-                'observaciones' => 'nullable|string',
+                'observaciones' => 'nullable|string|max:500',
             ]);
 
             if ($validator->fails()) {
@@ -127,9 +137,11 @@ class ReposicionController extends Controller
                 continue;
             }
 
-            $prestamo = Prestamo::with(['alumno', 'libro', 'carrera'])->find($data['prestamo_id']);
+            $validated = $validator->validated();
+
+            $prestamo = Prestamo::with(['alumno', 'libro', 'carrera'])->find($validated['prestamo_id']);
             if (!$prestamo) {
-                $errors[] = "Fila " . ($index + 1) . ": El préstamo {$data['prestamo_id']} no existe.";
+                $errors[] = "Fila " . ($index + 1) . ": El préstamo {$validated['prestamo_id']} no existe.";
                 continue;
             }
 
@@ -144,14 +156,14 @@ class ReposicionController extends Controller
                 'alumno_id'     => $prestamo->alumno_id,
                 'libro_id'      => $prestamo->libro_id,
                 'carrera_id'    => $prestamo->carrera_id,
-                'tipo'          => $data['tipo'],
-                'monto'         => $data['monto'],
+                'tipo'          => $validated['tipo'],
+                'monto'         => $validated['monto'],
                 'estado_pago'   => 'Pendiente',
-                'fecha_reporte' => $data['fecha_reporte'],
-                'observaciones' => $data['observaciones'] ?: null,
+                'fecha_reporte' => $validated['fecha_reporte'],
+                'observaciones' => $validated['observaciones'] ?: null,
             ]);
 
-            if ($prestamo->estado === 'Activo') {
+            if (strtolower(trim($prestamo->estado)) === 'activo') {
                 $prestamo->update(['estado' => 'Vencido']);
             }
 

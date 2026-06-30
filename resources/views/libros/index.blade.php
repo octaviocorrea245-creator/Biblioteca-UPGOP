@@ -12,6 +12,10 @@
         class="mb-4 inline-block bg-green-600 text-white px-4 py-2 rounded ml-2">
             📊 Carga Masiva Excel
         </a>
+        <a href="{{ route('libros.pendientes') }}"
+            class="mb-4 inline-block bg-yellow-500 text-white px-4 py-2 rounded ml-2">
+                ⚠️ Pendientes Código de Barras
+        </a>
 
         @if(session('success'))
             <div class="mb-4 text-green-600">{{ session('success') }}</div>

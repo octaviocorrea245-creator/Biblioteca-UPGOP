@@ -35,21 +35,21 @@ class LibroController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'          => 'nullable|exists:carreras,id',
             'codigo'              => 'required|string|unique:libros',
             'tipo'                => 'required|in:Regular,Donado,Adquirido',
-            'titulo'              => 'required|string',
-            'autor'               => 'required|string',
-            'editorial'           => 'required|string',
-            'codigo_barras'       => 'nullable|string',
-            'localizacion'        => 'nullable|string',
+            'titulo'              => 'required|string|max:255',
+            'autor'               => 'required|string|max:255',
+            'editorial'           => 'required|string|max:255',
+            'codigo_barras'       => 'nullable|string|max:100',
+            'localizacion'        => 'nullable|string|max:100',
             'cantidad_total'      => 'required|integer|min:1',
             'cantidad_disponible' => 'required|integer|min:0',
             'costo'               => 'nullable|numeric|min:0',
         ]);
 
-        Libro::create($request->all());
+        Libro::create($validated);
         return redirect()->route('libros.index')->with('success', 'Libro registrado correctamente.');
     }
 
@@ -61,21 +61,21 @@ class LibroController extends Controller
 
     public function update(Request $request, Libro $libro)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'          => 'nullable|exists:carreras,id',
             'codigo'              => 'required|string|unique:libros,codigo,' . $libro->id,
             'tipo'                => 'required|in:Regular,Donado,Adquirido',
-            'titulo'              => 'required|string',
-            'autor'               => 'required|string',
-            'editorial'           => 'required|string',
-            'codigo_barras'       => 'nullable|string',
-            'localizacion'        => 'nullable|string',
+            'titulo'              => 'required|string|max:255',
+            'autor'               => 'required|string|max:255',
+            'editorial'           => 'required|string|max:255',
+            'codigo_barras'       => 'nullable|string|max:100',
+            'localizacion'        => 'nullable|string|max:100',
             'cantidad_total'      => 'required|integer|min:1',
             'cantidad_disponible' => 'required|integer|min:0',
             'costo'               => 'nullable|numeric|min:0',
         ]);
 
-        $libro->update($request->all());
+        $libro->update($validated);
         return redirect()->route('libros.index')->with('success', 'Libro actualizado correctamente.');
     }
 
@@ -120,15 +120,15 @@ class LibroController extends Controller
 
         foreach ($filas as $i => $fila) {
             // Columnas reales: CARRERA, CANT, TITULO, LOC, AUTOR, EDITORIAL, OBSERV., CODIGO_BARRAS, PROVEEDOR
-            $claveCarrera   = trim($fila[0] ?? '');
+            $claveCarrera   = \Illuminate\Support\Str::limit(strip_tags(trim($fila[0] ?? '')), 50, '');
             $cantidad       = $fila[1] ?? 1;
-            $titulo         = trim($fila[2] ?? '');
-            $localizacion   = trim($fila[3] ?? '');
-            $autor          = trim($fila[4] ?? '');
-            $editorial      = trim($fila[5] ?? '');
-            $observacion    = trim($fila[6] ?? '');
-            $codigoBarras   = trim($fila[7] ?? '');
-            $proveedor      = trim($fila[8] ?? '');
+            $titulo         = \Illuminate\Support\Str::limit(strip_tags(trim($fila[2] ?? '')), 255, '');
+            $localizacion   = \Illuminate\Support\Str::limit(strip_tags(trim($fila[3] ?? '')), 100, '');
+            $autor          = \Illuminate\Support\Str::limit(strip_tags(trim($fila[4] ?? '')), 255, '');
+            $editorial      = \Illuminate\Support\Str::limit(strip_tags(trim($fila[5] ?? '')), 255, '');
+            $observacion    = \Illuminate\Support\Str::limit(strip_tags(trim($fila[6] ?? '')), 255, '');
+            $codigoBarras   = \Illuminate\Support\Str::limit(strip_tags(trim($fila[7] ?? '')), 100, '');
+            $proveedor      = \Illuminate\Support\Str::limit(strip_tags(trim($fila[8] ?? '')), 255, '');
 
             // Saltar filas vacías o sin título
             // Saltar solo si no hay título (fila realmente vacía)
@@ -222,5 +222,55 @@ class LibroController extends Controller
         $writer->save($rutaTemp);
 
         return response()->download($rutaTemp)->deleteFileAfterSend(true);
+    }
+    public function pendientesCodigoBarras(\Illuminate\Http\Request $request)
+    {
+        $query = Libro::with('carrera')->where('codigo_barras', 'like', 'SIN-CB-%');
+
+        if ($request->filled('buscar')) {
+            $buscar = $request->buscar;
+            $query->where(function($q) use ($buscar) {
+                $q->where('titulo', 'like', "%{$buscar}%")
+                ->orWhere('autor', 'like', "%{$buscar}%");
+            });
+        }
+
+        $libros = $query->paginate(10)->withQueryString();
+        return view('libros.pendientes', compact('libros'));
+    }
+
+    public function actualizarCodigoBarras(\Illuminate\Http\Request $request, Libro $libro)
+    {
+        $request->validate([
+            'codigo_barras' => 'required|string|unique:libros,codigo_barras,' . $libro->id,
+        ]);
+
+        $libro->update([
+            'codigo_barras' => $request->codigo_barras,
+        ]);
+
+        return redirect()->route('libros.pendientes')->with('success', "Código de barras actualizado para '{$libro->titulo}'.");
+    }
+    public function buscarPorCodigoBarras(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'codigo_barras' => 'required|string|max:100',
+        ]);
+
+        $libro = Libro::where('codigo_barras', trim($request->codigo_barras))
+            ->where('cantidad_disponible', '>', 0)
+            ->first();
+
+        if (!$libro) {
+            return response()->json(['encontrado' => false]);
+        }
+
+        return response()->json([
+            'encontrado' => true,
+            'id'         => $libro->id,
+            'titulo'     => $libro->titulo,
+            'codigo'     => $libro->codigo,
+            'disponible' => $libro->cantidad_disponible,
+        ]);
     }
 }

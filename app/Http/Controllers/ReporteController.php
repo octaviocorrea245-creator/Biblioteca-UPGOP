@@ -78,7 +78,7 @@ class ReporteController extends Controller
     public function prestamoscuatrimestrales(Request $request)
     {
         $request->validate([
-            'cuatrimestre' => 'required|string',
+            'cuatrimestre' => 'required|string|max:20|regex:/^[A-Za-z0-9\-]+$/',    
             'carrera_id'   => 'nullable|exists:carreras,id',
         ]);
 
@@ -185,18 +185,18 @@ class ReporteController extends Controller
     // Reporte de donaciones
     public function donaciones(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'   => 'nullable|exists:carreras,id',
-            'cuatrimestre' => 'nullable|string',
+            'cuatrimestre' => 'nullable|string|max:20',
         ]);
 
         $query = Donacion::with('carrera');
 
-        if ($request->carrera_id) {
-            $query->where('carrera_id', $request->carrera_id);
+        if (!empty($validated['carrera_id'])) {
+            $query->where('carrera_id', $validated['carrera_id']);
         }
-        if ($request->cuatrimestre) {
-            $query->where('cuatrimestre', $request->cuatrimestre);
+        if (!empty($validated['cuatrimestre'])) {
+            $query->where('cuatrimestre', $validated['cuatrimestre']);
         }
 
         $donaciones = $query->get();
@@ -234,19 +234,20 @@ class ReporteController extends Controller
     // Reporte de adquisiciones
     public function adquisiciones(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id' => 'nullable|exists:carreras,id',
-            'proveedor'  => 'nullable|string',
+            'proveedor'  => 'nullable|string|max:255',
         ]);
 
         $query = Adquisicion::with('carrera');
 
-        if ($request->carrera_id) {
-            $query->where('carrera_id', $request->carrera_id);
+        if (!empty($validated['carrera_id'])) {
+            $query->where('carrera_id', $validated['carrera_id']);
         }
-        if ($request->proveedor) {
-            $query->where('proveedor', 'like', "%{$request->proveedor}%");
+        if (!empty($validated['proveedor'])) {
+            $query->where('proveedor', 'like', "%{$validated['proveedor']}%");
         }
+
 
         $adquisiciones = $query->get();
         $carrera       = $request->carrera_id ? Carrera::find($request->carrera_id) : null;

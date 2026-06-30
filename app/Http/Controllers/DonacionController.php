@@ -22,24 +22,24 @@ class DonacionController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'        => 'required|exists:carreras,id',
-            'titulo'            => 'required|string',
-            'autor'             => 'required|string',
-            'editorial'         => 'required|string',
-            'codigo_barras'     => 'nullable|string',
-            'costo'             => 'nullable|numeric',
+            'titulo'            => 'required|string|max:255',
+            'autor'             => 'required|string|max:255',
+            'editorial'         => 'required|string|max:255',
+            'codigo_barras'     => 'nullable|string|max:100',
+            'costo'             => 'nullable|numeric|min:0',
             'fecha'             => 'required|date',
-            'alumno_donante'    => 'required|string',
-            'matricula_donante' => 'required|string',
-            'cuatrimestre'      => 'required|string',
+            'alumno_donante'    => 'required|string|max:255',
+            'matricula_donante' => 'required|string|max:20',
+            'cuatrimestre'      => 'required|string|max:20',
             'generacion'        => 'required|digits:4',
         ]);
 
         // Generar código automático D-[generacion]-[###]
-        $codigo = Donacion::generarCodigo($request->generacion);
+        $codigo = Donacion::generarCodigo($validated['generacion']);
 
-        Donacion::create(array_merge($request->all(), ['codigo_donacion' => $codigo]));
+        Donacion::create(array_merge($validated, ['codigo_donacion' => $codigo]));
 
         return redirect()->route('donaciones.index')->with('success', "Donación registrada con código $codigo.");
     }
@@ -52,21 +52,21 @@ class DonacionController extends Controller
 
     public function update(Request $request, Donacion $donacion)
     {
-        $request->validate([
+        $validated = $request->validate([
             'carrera_id'        => 'required|exists:carreras,id',
-            'titulo'            => 'required|string',
-            'autor'             => 'required|string',
-            'editorial'         => 'required|string',
-            'codigo_barras'     => 'nullable|string',
-            'costo'             => 'nullable|numeric',
+            'titulo'            => 'required|string|max:255',
+            'autor'             => 'required|string|max:255',
+            'editorial'         => 'required|string|max:255',
+            'codigo_barras'     => 'nullable|string|max:100',
+            'costo'             => 'nullable|numeric|min:0',
             'fecha'             => 'required|date',
-            'alumno_donante'    => 'required|string',
-            'matricula_donante' => 'required|string',
-            'cuatrimestre'      => 'required|string',
+            'alumno_donante'    => 'required|string|max:255',
+            'matricula_donante' => 'required|string|max:20',
+            'cuatrimestre'      => 'required|string|max:20',
             'generacion'        => 'required|digits:4',
         ]);
 
-        $donacion->update($request->all());
+        $donacion->update($validated);
         return redirect()->route('donaciones.index')->with('success', 'Donación actualizada correctamente.');
     }
 

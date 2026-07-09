@@ -24,14 +24,23 @@ Route::get('/dashboard', function () {
         'librosDisponibles'    => \App\Models\Libro::where('cantidad_disponible', '>', 0)->count(),
         'totalAlumnos'         => \App\Models\Alumno::count(),
         'alumnosActivos'       => \App\Models\Alumno::where('estado', 'Activo')->count(),
-        'prestamosActivos'     => \App\Models\Prestamo::where('estado', 'Activo')->count(),
-        'prestamosVencidos'    => \App\Models\Prestamo::where('estado', 'Vencido')->count(),
+        'prestamosActivos'     => \App\Models\Prestamo::where('estado', 'activo')->count(),
+        'prestamosVencidos'    => \App\Models\Prestamo::whereRaw('LOWER(estado) = ?', ['vencido'])->count(),
         'deudores'             => \App\Models\Alumno::where('estado', 'Deudor')->count(),
         'rezagados'            => \App\Models\Alumno::where('estado', 'Rezagado')->count(),
         'donaciones'           => \App\Models\Donacion::count(),
         'adquisiciones'        => \App\Models\Adquisicion::count(),
         'reposicionesPend'     => \App\Models\Reposicion::where('estado_pago', 'Pendiente')->count(),
         'carreras'             => \App\Models\Carrera::where('activa', true)->count(),
+        'proximosVencer'       => \App\Models\Prestamo::with(['alumno', 'libro'])
+                                    ->whereRaw('LOWER(estado) = ?', ['activo'])
+                                    ->whereDate('fecha_devolucion_esperada', '<=', now()->addDays(3))
+                                    ->orderBy('fecha_devolucion_esperada')
+                                    ->get(),
+        'ultimosPrestamos'     => \App\Models\Prestamo::with(['alumno', 'libro'])
+                                    ->latest()
+                                    ->take(5)
+                                    ->get(),
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

@@ -286,4 +286,88 @@
             <div class="mod-desc">Ver deudores</div>
         </a>
     </div>
+    <div class="section-divider"></div>
+
+    {{-- Préstamos próximos a vencer --}}
+    @if($proximosVencer->count() > 0)
+    <div class="section-title" style="color:#C0392B;">⚠ Préstamos próximos a vencer</div>
+    <div class="red-bar" style="margin-bottom:1.1rem;"></div>
+    <div style="background:#fff; border-radius:14px; box-shadow:0 1px 3px rgba(13,27,53,.05); overflow:hidden; margin-bottom:1.75rem; border-left:4px solid #C0392B;">        <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+            <thead>
+                <tr style="background:#C0392B;">
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Folio</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Alumno</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Libro</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Vence</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Días</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($proximosVencer as $p)
+                @php
+                    $dias = now()->startOfDay()->diffInDays($p->fecha_devolucion_esperada->startOfDay(), false);
+                @endphp
+                <tr style="border-top:1px solid #F5E6E6;">
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">#{{ $p->folio }}</td>
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">{{ $p->alumno->nombre }}</td>
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">{{ \Illuminate\Support\Str::limit($p->libro->titulo, 35) }}</td>
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">{{ $p->fecha_devolucion_esperada->format('d/m/Y') }}</td>
+                    <td style="padding:.7rem 1rem;">
+                        @if($dias < 0)
+                            <span style="background:#FDECEA; color:#C0392B; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">VENCIDO</span>
+                        @elseif($dias == 0)
+                            <span style="background:#FDECEA; color:#C0392B; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">Hoy</span>
+                        @elseif($dias == 1)
+                            <span style="background:#FEF3CD; color:#E67E22; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">Mañana</span>
+                        @else
+                            <span style="background:#FEF3CD; color:#E67E22; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">{{ $dias }} días</span>
+                        @endif
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
+    {{-- Últimos préstamos --}}
+    <div class="section-title">Últimos préstamos registrados</div>
+    <div class="red-bar" style="margin-bottom:1.1rem;"></div>
+    <div style="background:#fff; border-radius:14px; box-shadow:0 1px 3px rgba(13,27,53,.05); overflow:hidden; margin-bottom:1.75rem; border-left:4px solid #1A56B0;">        <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+            <thead>
+                <tr style="background:#1A56B0;">
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Folio</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Alumno</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Libro</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Fecha</th>
+                    <th style="padding:.75rem 1rem; text-align:left; color:#fff; font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($ultimosPrestamos as $p)
+                @php $estadoLower = strtolower(trim($p->estado)); @endphp
+                <tr style="border-top:1px solid #E8EDF5;">
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">#{{ $p->folio }}</td>
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">{{ $p->alumno->nombre }}</td>
+                    <td style="padding:.7rem 1rem; color:#0D1B35;">{{ \Illuminate\Support\Str::limit($p->libro->titulo, 35) }}</td>
+                    <td style="padding:.7rem 1rem; color:#8496B0;">{{ $p->fecha_prestamo->format('d/m/Y') }}</td>
+                    <td style="padding:.7rem 1rem;">
+                        @if($estadoLower === 'activo')
+                            <span style="background:#EAFAF1; color:#27AE60; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">Activo</span>
+                        @elseif($estadoLower === 'devuelto')
+                            <span style="background:#EAF2FB; color:#1A56B0; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">Devuelto</span>
+                        @else
+                            <span style="background:#FDECEA; color:#C0392B; padding:.2rem .6rem; border-radius:20px; font-weight:600; font-size:.72rem;">Vencido</span>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr><td colspan="5" style="padding:1rem; text-align:center; color:#8496B0;">Sin préstamos registrados aún.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+        <div style="padding:.75rem 1rem; text-align:right; border-top:1px solid #E8EDF5;">
+            <a href="{{ route('prestamos.index') }}" style="font-size:.78rem; color:#1A56B0; font-weight:600; text-decoration:none;">Ver todos los préstamos →</a>
+        </div>
+    </div>
 </x-app-layout>

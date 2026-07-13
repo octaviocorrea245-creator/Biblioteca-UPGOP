@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Libro;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreLibroRequest;
+use App\Http\Requests\UpdateLibroRequest;
 
 class LibroController extends Controller
 {
@@ -13,14 +15,7 @@ class LibroController extends Controller
         $query = Libro::with('carrera');
 
         if ($request->filled('buscar')) {
-            $buscar = $request->buscar;
-            $query->where(function($q) use ($buscar) {
-                $q->where('titulo', 'like', "%{$buscar}%")
-                ->orWhere('autor', 'like', "%{$buscar}%")
-                ->orWhere('codigo', 'like', "%{$buscar}%")
-                ->orWhere('codigo_barras', 'like', "%{$buscar}%")
-                ->orWhere('editorial', 'like', "%{$buscar}%");
-            });
+            $query->buscar($request->buscar);
         }
 
         $libros = $query->paginate(10)->withQueryString();
@@ -33,23 +28,9 @@ class LibroController extends Controller
         return view('libros.create', compact('carreras'));
     }
 
-    public function store(Request $request)
+    public function store(StoreLibroRequest $request)
     {
-        $validated = $request->validate([
-            'carrera_id'          => 'nullable|exists:carreras,id',
-            'codigo'              => 'required|string|unique:libros',
-            'tipo'                => 'required|in:Regular,Donado,Adquirido',
-            'titulo'              => 'required|string|max:255',
-            'autor'               => 'required|string|max:255',
-            'editorial'           => 'required|string|max:255',
-            'codigo_barras'       => 'nullable|string|max:100',
-            'localizacion'        => 'nullable|string|max:100',
-            'cantidad_total'      => 'required|integer|min:1',
-            'cantidad_disponible' => 'required|integer|min:0',
-            'costo'               => 'nullable|numeric|min:0',
-        ]);
-
-        Libro::create($validated);
+        Libro::create($request->validated());
         return redirect()->route('libros.index')->with('success', 'Libro registrado correctamente.');
     }
 
@@ -59,23 +40,9 @@ class LibroController extends Controller
         return view('libros.edit', compact('libro', 'carreras'));
     }
 
-    public function update(Request $request, Libro $libro)
+    public function update(UpdateLibroRequest $request, Libro $libro)
     {
-        $validated = $request->validate([
-            'carrera_id'          => 'nullable|exists:carreras,id',
-            'codigo'              => 'required|string|unique:libros,codigo,' . $libro->id,
-            'tipo'                => 'required|in:Regular,Donado,Adquirido',
-            'titulo'              => 'required|string|max:255',
-            'autor'               => 'required|string|max:255',
-            'editorial'           => 'required|string|max:255',
-            'codigo_barras'       => 'nullable|string|max:100',
-            'localizacion'        => 'nullable|string|max:100',
-            'cantidad_total'      => 'required|integer|min:1',
-            'cantidad_disponible' => 'required|integer|min:0',
-            'costo'               => 'nullable|numeric|min:0',
-        ]);
-
-        $libro->update($validated);
+        $libro->update($request->validated());
         return redirect()->route('libros.index')->with('success', 'Libro actualizado correctamente.');
     }
 
@@ -340,35 +307,39 @@ public function importarDonaciones(\Illuminate\Http\Request $request)
         }
 
         try {
-            \App\Models\Libro::create([
-                'carrera_id'          => $carrera_id,
-                'codigo'              => 'DON-' . $codigoBarras,
-                'tipo'                => 'Donado',
-                'titulo'              => $titulo,
-                'autor'               => $autor ?: 'Sin autor',
-                'editorial'           => $editorial ?: 'Sin editorial',
-                'codigo_barras'       => $codigoBarras,
-                'localizacion'        => $localizacion ?: null,
-                'cantidad_total'      => is_numeric($cantidad) ? (int)$cantidad : 1,
-                'cantidad_disponible' => is_numeric($cantidad) ? (int)$cantidad : 1,
-            ]);
+            \DB::transaction(function() use (
+                $carrera_id, $codigoBarras, $titulo, $autor,
+                $editorial, $localizacion, $cantidad
+            ) {
+                \App\Models\Libro::create([
+                    'carrera_id'          => $carrera_id,
+                    'codigo'              => 'DON-' . $codigoBarras,
+                    'tipo'                => 'Donado',
+                    'titulo'              => $titulo,
+                    'autor'               => $autor ?: 'Sin autor',
+                    'editorial'           => $editorial ?: 'Sin editorial',
+                    'codigo_barras'       => $codigoBarras,
+                    'localizacion'        => $localizacion ?: null,
+                    'cantidad_total'      => is_numeric($cantidad) ? (int)$cantidad : 1,
+                    'cantidad_disponible' => is_numeric($cantidad) ? (int)$cantidad : 1,
+                ]);
 
-            $codigoDonacion = \App\Models\Donacion::generarCodigo(date('Y'));
-            \App\Models\Donacion::create([
-                'carrera_id'        => $carrera_id,
-                'codigo_donacion'   => $codigoDonacion,
-                'titulo'            => $titulo,
-                'autor'             => $autor ?: 'Sin autor',
-                'editorial'         => $editorial ?: 'Sin editorial',
-                'codigo_barras'     => $codigoBarras,
-                'costo'             => null,
-                'fecha'             => now()->toDateString(),
-                'alumno_donante'    => 'Donación institucional',
-                'matricula_donante' => 'N/A',
-                'cuatrimestre'      => date('Y') . '-1',
-                'generacion'        => date('Y'),
-            ]);
-
+                $codigoDonacion = \App\Models\Donacion::generarCodigo(date('Y'));
+                \App\Models\Donacion::create([
+                    'carrera_id'        => $carrera_id,
+                    'codigo_donacion'   => $codigoDonacion,
+                    'titulo'            => $titulo,
+                    'autor'             => $autor ?: 'Sin autor',
+                    'editorial'         => $editorial ?: 'Sin editorial',
+                    'codigo_barras'     => $codigoBarras,
+                    'costo'             => null,
+                    'fecha'             => now()->toDateString(),
+                    'alumno_donante'    => 'Donación institucional',
+                    'matricula_donante' => 'N/A',
+                    'cuatrimestre'      => date('Y') . '-1',
+                    'generacion'        => date('Y'),
+                ]);
+            });
             $insertados++;
         } catch (\Exception $e) {
             $errores[] = "Fila " . ($i + 2) . ": " . $e->getMessage();
@@ -426,38 +397,42 @@ public function importarDonacionesAntiguas(\Illuminate\Http\Request $request)
         }
 
         try {
-            \App\Models\Libro::create([
-                'carrera_id'          => null,
-                'codigo'              => 'DON-ANT-' . str_pad($i + 3, 5, '0', STR_PAD_LEFT),
-                'tipo'                => 'Donado',
-                'titulo'              => $titulo,
-                'autor'               => $autor ?: 'Sin autor',
-                'editorial'           => $editorial ?: 'Sin editorial',
-                'codigo_barras'       => $codigoBarras,
-                'localizacion'        => $localizacion ?: null,
-                'cantidad_total'      => 1,
-                'cantidad_disponible' => 1,
-            ]);
+            \DB::transaction(function() use (
+                $carrera_id, $codigoBarras, $titulo, $autor,
+                $editorial, $localizacion, $cantidad
+            ) {
+                \App\Models\Libro::create([
+                    'carrera_id'          => $carrera_id,
+                    'codigo'              => 'DON-' . $codigoBarras,
+                    'tipo'                => 'Donado',
+                    'titulo'              => $titulo,
+                    'autor'               => $autor ?: 'Sin autor',
+                    'editorial'           => $editorial ?: 'Sin editorial',
+                    'codigo_barras'       => $codigoBarras,
+                    'localizacion'        => $localizacion ?: null,
+                    'cantidad_total'      => is_numeric($cantidad) ? (int)$cantidad : 1,
+                    'cantidad_disponible' => is_numeric($cantidad) ? (int)$cantidad : 1,
+                ]);
 
-            $codigoDonacion = \App\Models\Donacion::generarCodigo(2016);
-            \App\Models\Donacion::create([
-                'carrera_id'        => null,
-                'codigo_donacion'   => $codigoDonacion,
-                'titulo'            => $titulo,
-                'autor'             => $autor ?: 'Sin autor',
-                'editorial'         => $editorial ?: 'Sin editorial',
-                'codigo_barras'     => $codigoBarras,
-                'costo'             => null,
-                'fecha'             => '2016-04-01',
-                'alumno_donante'    => 'Donación institucional',
-                'matricula_donante' => 'N/A',
-                'cuatrimestre'      => '2016-1',
-                'generacion'        => 2016,
-            ]);
-
+                $codigoDonacion = \App\Models\Donacion::generarCodigo(date('Y'));
+                \App\Models\Donacion::create([
+                    'carrera_id'        => $carrera_id,
+                    'codigo_donacion'   => $codigoDonacion,
+                    'titulo'            => $titulo,
+                    'autor'             => $autor ?: 'Sin autor',
+                    'editorial'         => $editorial ?: 'Sin editorial',
+                    'codigo_barras'     => $codigoBarras,
+                    'costo'             => null,
+                    'fecha'             => now()->toDateString(),
+                    'alumno_donante'    => 'Donación institucional',
+                    'matricula_donante' => 'N/A',
+                    'cuatrimestre'      => date('Y') . '-1',
+                    'generacion'        => date('Y'),
+                ]);
+            });
             $insertados++;
         } catch (\Exception $e) {
-            $errores[] = "Fila " . ($i + 3) . ": " . $e->getMessage();
+            $errores[] = "Fila " . ($i + 2) . ": " . $e->getMessage();
         }
     }
 

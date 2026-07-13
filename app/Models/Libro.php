@@ -24,7 +24,7 @@ class Libro extends Model
     ];
 
     protected $casts = [
-        'cantidad_total'      => 'integer',
+        'cantidad_total' => 'integer',
         'cantidad_disponible' => 'integer',
     ];
 
@@ -40,18 +40,35 @@ class Libro extends Model
 
     public function prestamosActivos()
     {
-        return $this->hasMany(Prestamo::class)->where('estado', 'Activo');
+        return $this->hasMany(Prestamo::class)
+            ->where('estado', Prestamo::ACTIVO);
     }
 
-    public function estaDisponible()
+    public function estaDisponible(): bool
     {
-        return $this->cantidad_disponible > 0;
+        return $this->cantidad_total > 0
+            && $this->cantidad_disponible > 0;
     }
 
-    public function actualizarDisponibilidad()
+    public function actualizarDisponibilidad(): void
     {
         $prestamosActivos = $this->prestamosActivos()->count();
-        $this->cantidad_disponible = $this->cantidad_total - $prestamosActivos;
+
+        $this->cantidad_disponible = max(
+            0,
+            $this->cantidad_total - $prestamosActivos
+        );
+
         $this->save();
+    }
+    public function scopeBuscar($query, $texto)
+    {
+        return $query->where(function ($q) use ($texto) {
+            $q->where('titulo', 'like', "%{$texto}%")
+            ->orWhere('autor', 'like', "%{$texto}%")
+            ->orWhere('codigo', 'like', "%{$texto}%")
+            ->orWhere('codigo_barras', 'like', "%{$texto}%")
+            ->orWhere('editorial', 'like', "%{$texto}%");
+        });
     }
 }

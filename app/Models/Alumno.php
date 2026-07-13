@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Alumno extends Model
 {
+    public const ACTIVO = 'Activo';
+    public const DEUDOR = 'Deudor';
+    public const REZAGADO = 'Rezagado';
+    
     protected $fillable = [
         'carrera_id',
         'nombre',

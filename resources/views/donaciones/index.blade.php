@@ -8,6 +8,10 @@
            class="mb-4 inline-block bg-blue-600 text-white px-4 py-2 rounded">
             + Nueva Donación
         </a>
+        <a href="{{ route('libros.importar.donaciones.form') }}"
+         class="mb-4 inline-block bg-purple-600 text-white px-4 py-2 rounded ml-2">
+            📊 Importar Donaciones Excel
+        </a>
 
         @if(session('success'))
             <div class="mb-4 text-green-600">{{ session('success') }}</div>

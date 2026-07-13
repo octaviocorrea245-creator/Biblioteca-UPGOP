@@ -58,6 +58,10 @@ Route::get('libros/plantilla-excel', [LibroController::class, 'plantilla'])->nam
 Route::get('libros/pendientes-codigo-barras', [LibroController::class, 'pendientesCodigoBarras'])->name('libros.pendientes');
 Route::patch('libros/{libro}/actualizar-codigo-barras', [LibroController::class, 'actualizarCodigoBarras'])->name('libros.actualizarCodigoBarras');
 Route::get('libros/buscar-por-codigo-barras', [LibroController::class, 'buscarPorCodigoBarras'])->name('libros.buscarPorCodigoBarras');
+Route::get('libros/importar-donaciones', [LibroController::class, 'importarDonacionesForm'])->name('libros.importar.donaciones.form');
+Route::post('libros/importar-donaciones', [LibroController::class, 'importarDonaciones'])->name('libros.importar.donaciones');
+Route::post('libros/importar-donaciones-antiguas', [LibroController::class, 'importarDonacionesAntiguas'])->name('libros.importar.donaciones.antiguas');
+Route::post('libros/listar-hojas', [LibroController::class, 'listarHojas'])->name('libros.listarHojas');
 Route::resource('libros', LibroController::class);
 Route::resource('prestamos', PrestamoController::class);
 Route::patch('prestamos/{prestamo}/devolver', [PrestamoController::class, 'devolver'])->name('prestamos.devolver');

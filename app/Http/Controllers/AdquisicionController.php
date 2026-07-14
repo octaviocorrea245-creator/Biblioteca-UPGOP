@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Adquisicion;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreAdquisicionRequest;
+use App\Http\Requests\UpdateAdquisicionRequest;
 
 class AdquisicionController extends Controller
 {
@@ -20,24 +22,9 @@ class AdquisicionController extends Controller
         return view('adquisiciones.create', compact('carreras'));
     }
 
-    public function store(Request $request)
+    public function store(StoreAdquisicionRequest $request)
     {
-        $validated = $request->validate([
-            'carrera_id'    => 'required|exists:carreras,id',
-            'cantidad'      => 'required|integer|min:1',
-            'titulo'        => 'required|string|max:255',
-            'autor'         => 'required|string|max:255',
-            'editorial'     => 'required|string|max:255',
-            'localizacion'  => 'nullable|string|max:100',
-            'observacion'   => 'nullable|string|max:500',
-            'codigo_barras' => 'nullable|string|max:100',
-            'proveedor'     => 'required|string|max:255',
-            'factura'       => 'required|string|max:50',
-            'fecha_factura' => 'required|date',
-            'costo'         => 'required|numeric|min:0',
-        ]);
-
-        Adquisicion::create($validated);
+        Adquisicion::create($request->validated());
         return redirect()->route('adquisiciones.index')->with('success', 'Adquisición registrada correctamente.');
     }
 
@@ -47,24 +34,9 @@ class AdquisicionController extends Controller
         return view('adquisiciones.edit', compact('adquisicion', 'carreras'));
     }
 
-    public function update(Request $request, Adquisicion $adquisicion)
+   public function update(UpdateAdquisicionRequest $request, Adquisicion $adquisicion)
     {
-        $validated = $request->validate([
-            'carrera_id'    => 'required|exists:carreras,id',
-            'cantidad'      => 'required|integer|min:1',
-            'titulo'        => 'required|string|max:255',
-            'autor'         => 'required|string|max:255',
-            'editorial'     => 'required|string|max:255',
-            'localizacion'  => 'nullable|string|max:100',
-            'observacion'   => 'nullable|string|max:500',
-            'codigo_barras' => 'nullable|string|max:100',
-            'proveedor'     => 'required|string|max:255',
-            'factura'       => 'required|string|max:50',
-            'fecha_factura' => 'required|date',
-            'costo'         => 'required|numeric|min:0',
-        ]);
-
-        $adquisicion->update($validated);
+        $adquisicion->update($request->validated());
         return redirect()->route('adquisiciones.index')->with('success', 'Adquisición actualizada correctamente.');
     }
 

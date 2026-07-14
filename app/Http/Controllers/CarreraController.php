@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreCarreraRequest;
+use App\Http\Requests\UpdateCarreraRequest;
 
 class CarreraController extends Controller
 {
@@ -18,15 +20,9 @@ class CarreraController extends Controller
         return view('carreras.create');
     }
 
-    public function store(Request $request)
+   public function store(StoreCarreraRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255|unique:carreras',
-            'clave'  => 'required|string|max:20|unique:carreras',
-            'activa' => 'required|boolean',
-        ]);
-
-        Carrera::create($validated);
+        Carrera::create($request->validated());
         return redirect()->route('carreras.index')->with('success', 'Carrera registrada correctamente.');
     }
 
@@ -35,15 +31,9 @@ class CarreraController extends Controller
         return view('carreras.edit', compact('carrera'));
     }
 
-    public function update(Request $request, Carrera $carrera)
+    public function update(UpdateCarreraRequest $request, Carrera $carrera)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255|unique:carreras,nombre,' . $carrera->id,
-            'clave'  => 'required|string|max:20|unique:carreras,clave,' . $carrera->id,
-            'activa' => 'required|boolean',
-        ]);
-
-        $carrera->update($validated);
+        $carrera->update($request->validated());
         return redirect()->route('carreras.index')->with('success', 'Carrera actualizada correctamente.');
     }
 

@@ -30,4 +30,26 @@ class Alumno extends Model
     {
         return $this->hasMany(Prestamo::class);
     }
+    public function scopeActivos($query)
+    {
+        return $query->where('estado', 'Activo');
+    }
+
+    public function scopeDeudores($query)
+    {
+        return $query->where('estado', 'Deudor');
+    }
+
+    public function scopeRezagados($query)
+    {
+        return $query->where('estado', 'Rezagado');
+    }
+
+    public function scopeBuscar($query, string $texto)
+    {
+        return $query->where(function ($q) use ($texto) {
+            $q->where('nombre', 'like', "%{$texto}%")
+            ->orWhere('matricula', 'like', "%{$texto}%");
+        });
+    }
 }

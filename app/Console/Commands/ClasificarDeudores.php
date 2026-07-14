@@ -17,15 +17,14 @@ class ClasificarDeudores extends Command
         $hoy = Carbon::today();
 
         // Marcar como Vencido todos los préstamos Activos cuya fecha esperada ya pasó
-        $vencidos = Prestamo::where('estado', 'Activo')
-            ->where('fecha_devolucion_esperada', '<', $hoy)
-            ->with('alumno')
-            ->get();
-
+        $prestamosVencidos = Prestamo::activos()
+                ->where('fecha_devolucion_esperada', '<', now())
+                ->with('alumno')
+                ->get();
         $deudores  = 0;
         $rezagados = 0;
 
-        foreach ($vencidos as $prestamo) {
+            foreach ($prestamosVencidos as $prestamo) {
             // Marcar préstamo como Vencido
             $prestamo->update(['estado' => 'Vencido']);
 
@@ -42,6 +41,6 @@ class ClasificarDeudores extends Command
             }
         }
 
-        $this->info("Clasificación completada: {$deudores} deudores nuevos, {$rezagados} rezagados nuevos. Total préstamos vencidos: {$vencidos->count()}");
+        $this->info("Clasificación completada: {$deudores} deudores nuevos, {$rezagados} rezagados nuevos. Total préstamos vencidos: {$prestamosVencidos->count()}");
     }
 }

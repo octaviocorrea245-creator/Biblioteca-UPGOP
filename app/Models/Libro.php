@@ -71,4 +71,18 @@ class Libro extends Model
             ->orWhere('editorial', 'like', "%{$texto}%");
         });
     }
+    public function scopeDisponibles($query)
+    {
+        return $query->where('cantidad_disponible', '>', 0);
+    }
+
+    public function scopeTipo($query, string $tipo)
+    {
+        return $query->where('tipo', $tipo);
+    }
+
+    public function scopeDeCarrera($query, int $carreraId)
+    {
+        return $query->where('carrera_id', $carreraId);
+    }
 }

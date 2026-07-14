@@ -52,7 +52,7 @@ class Prestamo extends Model
     // Scope para préstamos activos
     public function scopeActivos($query)
     {
-        return $query->where('estado', self::ACTIVO);
+        return $query->whereRaw('LOWER(estado) = ?', ['activo']);
     }
 
     // Genera el siguiente folio para una carrera
@@ -78,5 +78,22 @@ class Prestamo extends Model
     {
         return $this->estado === self::ACTIVO
             && now()->greaterThan($this->fecha_devolucion_esperada);
+    }
+    
+
+    public function scopeVencidos($query)
+    {
+        return $query->whereRaw('LOWER(estado) = ?', ['vencido']);
+    }
+
+    public function scopeDevueltos($query)
+    {
+        return $query->whereRaw('LOWER(estado) = ?', ['devuelto']);
+    }
+
+    public function scopeProximosAVencer($query, int $dias = 3)
+    {
+        return $query->activos()
+            ->whereDate('fecha_devolucion_esperada', '<=', now()->addDays($dias));
     }
 }

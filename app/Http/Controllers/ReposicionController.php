@@ -7,6 +7,8 @@ use App\Models\Prestamo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreReposicionRequest;
+
 
 class ReposicionController extends Controller
 {
@@ -25,16 +27,9 @@ class ReposicionController extends Controller
         return view('reposiciones.create', compact('prestamos'));
     }
 
-   public function store(Request $request)
+   public function store(StoreReposicionRequest $request)
     {
-        $validated = $request->validate([
-            'prestamo_id'   => 'required|exists:prestamos,id',
-            'tipo'          => 'required|in:Perdida,Daño',
-            'monto'         => 'required|numeric|min:0',
-            'fecha_reporte' => 'required|date',
-            'observaciones' => 'nullable|string|max:500',
-        ]);
-
+        $validated = $request->validated();
         $prestamo = Prestamo::with(['alumno', 'libro', 'carrera'])->find($validated['prestamo_id']);
 
         Reposicion::create([
@@ -49,7 +44,6 @@ class ReposicionController extends Controller
             'observaciones' => $validated['observaciones'] ?? null,
         ]);
 
-        // Marcar préstamo como Vencido si estaba Activo
         if (strtolower(trim($prestamo->estado)) === 'activo') {
             $prestamo->update(['estado' => 'Vencido']);
         }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Alumno;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreAlumnoRequest;
+use App\Http\Requests\UpdateAlumnoRequest;
 
 class AlumnoController extends Controller
 {
@@ -20,19 +22,9 @@ class AlumnoController extends Controller
         return view('alumnos.create', compact('carreras'));
     }
 
-    public function store(Request $request)
+    public function store(StoreAlumnoRequest $request)
     {
-        $validated = $request->validate([
-            'nombre'       => 'required|string|max:255',
-            'matricula'    => 'required|string|max:20|unique:alumnos',
-            'carrera_id'   => 'required|exists:carreras,id',
-            'genero'       => 'required|in:M,F,Otro',
-            'cuatrimestre' => 'required|integer|min:1|max:12',
-            'turno'        => 'required|in:M,V,N',
-            'generacion'   => 'required|digits:4',
-        ]);
-
-        Alumno::create($validated);
+        Alumno::create($request->validated());
         return redirect()->route('alumnos.index')->with('success', 'Alumno registrado correctamente.');
     }
 
@@ -42,20 +34,9 @@ class AlumnoController extends Controller
         return view('alumnos.edit', compact('alumno', 'carreras'));
     }
 
-    public function update(Request $request, Alumno $alumno)
+    public function update(UpdateAlumnoRequest $request, Alumno $alumno)
     {
-        $validated = $request->validate([
-            'nombre'       => 'required|string|max:255',
-            'matricula'    => 'required|string|max:20|unique:alumnos,matricula,' . $alumno->id,
-            'carrera_id'   => 'required|exists:carreras,id',
-            'genero'       => 'required|in:M,F,Otro',
-            'cuatrimestre' => 'required|integer|min:1|max:12',
-            'turno'        => 'required|in:M,V,N',
-            'generacion'   => 'required|digits:4',
-            'estado' => 'required|in:Activo,Deudor,Rezagado',
-        ]);
-
-        $alumno->update($validated);
+        $alumno->update($request->validated());
         return redirect()->route('alumnos.index')->with('success', 'Alumno actualizado correctamente.');
     }
 

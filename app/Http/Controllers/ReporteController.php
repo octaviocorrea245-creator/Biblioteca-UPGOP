@@ -131,7 +131,7 @@ class ReporteController extends Controller
     // Reporte de deudores
     public function deudores(Request $request)
     {
-        $deudores = Alumno::where('estado', 'Deudor')->with(['carrera', 'prestamos'])->get();
+     $deudores = Alumno::deudores()->with(['carrera', 'prestamos'])->get();
 
         if ($request->query('format') === 'xml') {
             $xml = new \SimpleXMLElement('<deudores/>');
@@ -158,7 +158,7 @@ class ReporteController extends Controller
     // Reporte de rezagados
     public function rezagados(Request $request)
     {
-        $rezagados = Alumno::where('estado', 'Rezagado')->with(['carrera', 'prestamos'])->get();
+     $rezagados = Alumno::rezagados()->with(['carrera', 'prestamos'])->get();
 
         if ($request->query('format') === 'xml') {
             $xml = new \SimpleXMLElement('<rezagados/>');
@@ -331,7 +331,7 @@ public function prestamosMensualesExcel(Request $request)
 // Exportar deudores a Excel
 public function deudoresExcel()
 {
-    $deudores = Alumno::where('estado', 'Deudor')->with(['carrera', 'prestamos'])->get();
+    $deudores = Alumno::deudores()->with(['carrera', 'prestamos'])->get();
 
     $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     $hoja = $spreadsheet->getActiveSheet();
@@ -364,7 +364,7 @@ public function deudoresExcel()
 // Exportar rezagados a Excel
 public function rezagadosExcel()
 {
-    $rezagados = Alumno::where('estado', 'Rezagado')->with(['carrera', 'prestamos'])->get();
+    $rezagados = Alumno::rezagados()->with(['carrera', 'prestamos'])->get();
 
     $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     $hoja = $spreadsheet->getActiveSheet();

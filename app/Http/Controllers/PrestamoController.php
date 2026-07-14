@@ -8,6 +8,8 @@ use App\Models\Libro;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Http\Requests\StorePrestamoRequest;
+
 
 class PrestamoController extends Controller
 {
@@ -19,38 +21,24 @@ class PrestamoController extends Controller
 
     public function create()
     {
-        $alumnos  = Alumno::where('estado', 'Activo')->get();
-        $libros   = Libro::where('cantidad_disponible', '>', 0)->get();
+        $alumnos  = Alumno::activos()->get();
+        $libros   = Libro::disponibles()->get();
         $carreras = Carrera::where('activa', true)->get();
         return view('prestamos.create', compact('alumnos', 'libros', 'carreras'));
     }
 
-   public function store(Request $request)
+   public function store(StorePrestamoRequest $request)
     {
-        $validated = $request->validate([
-            'alumno_id'                 => 'required|exists:alumnos,id',
-            'libro_id'                  => 'required|exists:libros,id',
-            'carrera_id'                => 'required|exists:carreras,id',
-            'cuatrimestre'              => 'required|string|max:20',
-            'anio'                      => 'required|digits:4',
-            'fecha_prestamo'            => 'required|date',
-            'fecha_devolucion_esperada' => 'required|date|after:fecha_prestamo',
-            'observaciones'             => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
-        // Verificar que el alumno no sea rezagado
         $alumno = Alumno::find($validated['alumno_id']);
         if (strtolower(trim($alumno->estado)) === 'rezagado') {
             return back()->withErrors(['alumno_id' => 'Este alumno está rezagado y no puede realizar préstamos.'])->withInput();
         }
 
-        // Generar folio automático por carrera
         $folio = Prestamo::siguienteFolio($validated['carrera_id']);
-
-        // Crear el préstamo
         Prestamo::create(array_merge($validated, ['folio' => $folio]));
 
-        // Descontar disponibilidad del libro
         $libro = Libro::find($validated['libro_id']);
         $libro->decrement('cantidad_disponible');
 

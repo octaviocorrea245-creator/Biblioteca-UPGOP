@@ -19,4 +19,22 @@ class UpdateCarreraRequest extends FormRequest
             'activa' => 'required|boolean',
         ];
     }
+    public function attributes(): array
+    {
+        return [
+            'nombre' => 'nombre de la carrera',
+            'clave'  => 'clave de la carrera',
+            'activa' => 'estado activo',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'nombre.required' => 'El nombre de la carrera es obligatorio.',
+            'nombre.unique'   => 'Ya existe una carrera con ese nombre.',
+            'clave.required'  => 'La clave de la carrera es obligatoria.',
+            'clave.unique'    => 'Ya existe una carrera con esa clave.',
+        ];
+    }
 }

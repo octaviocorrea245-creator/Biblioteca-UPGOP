@@ -27,4 +27,34 @@ class StoreDonacionRequest extends FormRequest
             'generacion'        => 'required|digits:4',
         ];
     }
+    public function attributes(): array
+    {
+        return [
+            'carrera_id'        => 'carrera',
+            'titulo'            => 'título',
+            'autor'             => 'autor',
+            'editorial'         => 'editorial',
+            'codigo_barras'     => 'código de barras',
+            'costo'             => 'costo',
+            'fecha'             => 'fecha de donación',
+            'alumno_donante'    => 'nombre del donante',
+            'matricula_donante' => 'matrícula del donante',
+            'cuatrimestre'      => 'cuatrimestre',
+            'generacion'        => 'generación',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'titulo.required'            => 'El título del libro es obligatorio.',
+            'autor.required'             => 'El autor es obligatorio.',
+            'editorial.required'         => 'La editorial es obligatoria.',
+            'fecha.required'             => 'La fecha de donación es obligatoria.',
+            'alumno_donante.required'    => 'El nombre del donante es obligatorio.',
+            'matricula_donante.required' => 'La matrícula del donante es obligatoria.',
+            'generacion.digits'          => 'La generación debe ser un año de 4 dígitos.',
+            'carrera_id.required'        => 'Debes seleccionar una carrera.',
+        ];
+    }
 }

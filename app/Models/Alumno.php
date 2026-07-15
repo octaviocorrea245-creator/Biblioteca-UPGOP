@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Alumno extends Model
 {
@@ -21,12 +23,12 @@ class Alumno extends Model
         'estado',
     ];
 
-    public function carrera()
+    public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
-        
     }
-    public function prestamos()
+
+    public function prestamos(): HasMany
     {
         return $this->hasMany(Prestamo::class);
     }

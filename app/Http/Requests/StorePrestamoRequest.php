@@ -24,4 +24,32 @@ class StorePrestamoRequest extends FormRequest
             'observaciones'             => 'nullable|string|max:500',
         ];
     }
+    public function attributes(): array
+    {
+        return [
+            'alumno_id'                 => 'alumno',
+            'libro_id'                  => 'libro',
+            'carrera_id'                => 'carrera',
+            'cuatrimestre'              => 'cuatrimestre',
+            'anio'                      => 'año',
+            'fecha_prestamo'            => 'fecha de préstamo',
+            'fecha_devolucion_esperada' => 'fecha de devolución esperada',
+            'observaciones'             => 'observaciones',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'alumno_id.required'                  => 'Debes seleccionar un alumno.',
+            'alumno_id.exists'                    => 'El alumno seleccionado no existe.',
+            'libro_id.required'                   => 'Debes seleccionar un libro.',
+            'libro_id.exists'                     => 'El libro seleccionado no existe.',
+            'carrera_id.required'                 => 'Debes seleccionar una carrera.',
+            'fecha_prestamo.required'             => 'La fecha de préstamo es obligatoria.',
+            'fecha_devolucion_esperada.required'  => 'La fecha de devolución es obligatoria.',
+            'fecha_devolucion_esperada.after'     => 'La fecha de devolución debe ser posterior a la fecha de préstamo.',
+            'anio.digits'                         => 'El año debe tener 4 dígitos.',
+        ];
+    }
 }

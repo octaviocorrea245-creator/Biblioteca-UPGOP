@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class Prestamo extends Model
 {
@@ -34,17 +36,17 @@ class Prestamo extends Model
         'fecha_devolucion_real' => 'date',
     ];
 
-    public function carrera()
+    public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
     }
 
-    public function alumno()
+    public function alumno(): BelongsTo
     {
         return $this->belongsTo(Alumno::class);
     }
 
-    public function libro()
+    public function libro(): BelongsTo
     {
         return $this->belongsTo(Libro::class);
     }

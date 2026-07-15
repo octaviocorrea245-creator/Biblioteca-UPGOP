@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Libro extends Model
 {
@@ -28,20 +30,19 @@ class Libro extends Model
         'cantidad_disponible' => 'integer',
     ];
 
-    public function carrera()
+    public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
     }
 
-    public function prestamos()
+    public function prestamos(): HasMany
     {
         return $this->hasMany(Prestamo::class);
     }
 
-    public function prestamosActivos()
+    public function prestamosActivos(): HasMany
     {
-        return $this->hasMany(Prestamo::class)
-            ->where('estado', Prestamo::ACTIVO);
+        return $this->hasMany(Prestamo::class)->where('estado', 'Activo');
     }
 
     public function estaDisponible(): bool

@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Adquisicion;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreAdquisicionRequest;
+use App\Http\Requests\UpdateAdquisicionRequest;
 
 class AdquisicionController extends Controller
 {
     public function index()
     {
-        $adquisiciones = Adquisicion::with('carrera')->get();
+        $adquisiciones = Adquisicion::with('carrera')->paginate(10);
         return view('adquisiciones.index', compact('adquisiciones'));
     }
 
@@ -20,24 +22,9 @@ class AdquisicionController extends Controller
         return view('adquisiciones.create', compact('carreras'));
     }
 
-    public function store(Request $request)
+    public function store(StoreAdquisicionRequest $request)
     {
-        $request->validate([
-            'carrera_id'    => 'required|exists:carreras,id',
-            'cantidad'      => 'required|integer|min:1',
-            'titulo'        => 'required|string',
-            'autor'         => 'required|string',
-            'editorial'     => 'required|string',
-            'localizacion'  => 'nullable|string',
-            'observacion'   => 'nullable|string',
-            'codigo_barras' => 'nullable|string',
-            'proveedor'     => 'required|string',
-            'factura'       => 'required|string',
-            'fecha_factura' => 'required|date',
-            'costo'         => 'required|numeric|min:0',
-        ]);
-
-        Adquisicion::create($request->all());
+        Adquisicion::create($request->validated());
         return redirect()->route('adquisiciones.index')->with('success', 'Adquisición registrada correctamente.');
     }
 
@@ -47,24 +34,9 @@ class AdquisicionController extends Controller
         return view('adquisiciones.edit', compact('adquisicion', 'carreras'));
     }
 
-    public function update(Request $request, Adquisicion $adquisicion)
+   public function update(UpdateAdquisicionRequest $request, Adquisicion $adquisicion)
     {
-        $request->validate([
-            'carrera_id'    => 'required|exists:carreras,id',
-            'cantidad'      => 'required|integer|min:1',
-            'titulo'        => 'required|string',
-            'autor'         => 'required|string',
-            'editorial'     => 'required|string',
-            'localizacion'  => 'nullable|string',
-            'observacion'   => 'nullable|string',
-            'codigo_barras' => 'nullable|string',
-            'proveedor'     => 'required|string',
-            'factura'       => 'required|string',
-            'fecha_factura' => 'required|date',
-            'costo'         => 'required|numeric|min:0',
-        ]);
-
-        $adquisicion->update($request->all());
+        $adquisicion->update($request->validated());
         return redirect()->route('adquisiciones.index')->with('success', 'Adquisición actualizada correctamente.');
     }
 

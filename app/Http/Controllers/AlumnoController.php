@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Alumno;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreAlumnoRequest;
+use App\Http\Requests\UpdateAlumnoRequest;
 
 class AlumnoController extends Controller
 {
     public function index()
     {
-        $alumnos = Alumno::with('carrera')->get();
+        $alumnos = Alumno::with('carrera')->paginate(10);
         return view('alumnos.index', compact('alumnos'));
     }
 
@@ -20,19 +22,9 @@ class AlumnoController extends Controller
         return view('alumnos.create', compact('carreras'));
     }
 
-    public function store(Request $request)
+    public function store(StoreAlumnoRequest $request)
     {
-        $request->validate([
-            'nombre'      => 'required|string',
-            'matricula'   => 'required|string|unique:alumnos',
-            'carrera_id'  => 'required|exists:carreras,id',
-            'genero'      => 'required|in:M,F,Otro',
-            'cuatrimestre'=> 'required|integer|min:1|max:12',
-            'turno'       => 'required|in:M,V,N',
-            'generacion'  => 'required|digits:4',
-        ]);
-
-        Alumno::create($request->all());
+        Alumno::create($request->validated());
         return redirect()->route('alumnos.index')->with('success', 'Alumno registrado correctamente.');
     }
 
@@ -42,19 +34,9 @@ class AlumnoController extends Controller
         return view('alumnos.edit', compact('alumno', 'carreras'));
     }
 
-    public function update(Request $request, Alumno $alumno)
+    public function update(UpdateAlumnoRequest $request, Alumno $alumno)
     {
-        $request->validate([
-            'nombre'      => 'required|string',
-            'matricula'   => 'required|string|unique:alumnos,matricula,' . $alumno->id,
-            'carrera_id'  => 'required|exists:carreras,id',
-            'genero'      => 'required|in:M,F,Otro',
-            'cuatrimestre'=> 'required|integer|min:1|max:12',
-            'turno'       => 'required|in:M,V,N',
-            'generacion'  => 'required|digits:4',
-        ]);
-
-        $alumno->update($request->all());
+        $alumno->update($request->validated());
         return redirect()->route('alumnos.index')->with('success', 'Alumno actualizado correctamente.');
     }
 

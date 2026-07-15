@@ -16,6 +16,25 @@
          <div class="mb-4 text-red-600">{{ session('error') }}</div>
         @endif
 
+        <div class="bg-white shadow rounded p-6 mb-4">
+            <h3 class="font-semibold text-lg mb-3">Carga masiva de reposiciones</h3>
+            <form action="{{ route('reposiciones.importar') }}" method="POST" enctype="multipart/form-data" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                @csrf
+                <div class="flex-1 min-w-0">
+                    <label class="block text-sm font-medium text-gray-700">Archivo XML</label>
+                    <input type="file" name="xml_file" accept=".xml" class="mt-1 block w-full border-gray-300 rounded shadow-sm" />
+                    @error('xml_file') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
+                    <p class="text-xs text-gray-500 mt-1">El archivo debe tener un elemento raíz <code>&lt;reposiciones&gt;</code> y elementos <code>&lt;reposicion&gt;</code> con <code>prestamo_id</code>, <code>tipo</code>, <code>monto</code> y <code>fecha_reporte</code>.</p>
+                </div>
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Importar XML</button>
+            </form>
+        </div>
+
+        <div class="mb-4">
+            <input type="text" id="buscador" placeholder="Buscar por alumno o libro..."
+                class="w-full border-gray-300 rounded shadow-sm p-2"
+                onkeyup="buscarEnTabla()">
+        </div>
         <table class="w-full bg-white shadow rounded mt-4">
             <thead class="bg-gray-100">
                 <tr>
@@ -69,5 +88,18 @@
                 @endforeach
             </tbody>
         </table>
+        <div class="mt-4">
+            {{ $reposiciones->links() }}
+        </div>
     </div>
+    <script>
+        function buscarEnTabla() {
+            const input = document.getElementById('buscador').value.toLowerCase();
+            const filas = document.querySelectorAll('tbody tr');
+            filas.forEach(fila => {
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
 </x-app-layout>

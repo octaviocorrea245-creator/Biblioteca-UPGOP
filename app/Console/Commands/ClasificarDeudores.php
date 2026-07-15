@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Alumno;
 use App\Models\Prestamo;
 use Illuminate\Console\Command;
+use Carbon\Carbon;
 
 class ClasificarDeudores extends Command
 {
@@ -13,20 +14,23 @@ class ClasificarDeudores extends Command
 
     public function handle()
     {
-        // Préstamos activos cuya fecha esperada ya pasó
-        $prestamosVencidos = Prestamo::where('estado', 'Activo')
-            ->where('fecha_devolucion_esperada', '<', now())
-            ->with('alumno')
-            ->get();
+        $hoy = Carbon::today();
 
+        // Marcar como Vencido todos los préstamos Activos cuya fecha esperada ya pasó
+        $prestamosVencidos = Prestamo::activos()
+                ->where('fecha_devolucion_esperada', '<', now())
+                ->with('alumno')
+                ->get();
         $deudores  = 0;
         $rezagados = 0;
 
-        foreach ($prestamosVencidos as $prestamo) {
-            $alumno = $prestamo->alumno;
-
+            foreach ($prestamosVencidos as $prestamo) {
             // Marcar préstamo como Vencido
             $prestamo->update(['estado' => 'Vencido']);
+
+            $alumno = $prestamo->alumno;
+
+            if (!$alumno) continue;
 
             if ($alumno->estado === 'Activo') {
                 $alumno->update(['estado' => 'Deudor']);
@@ -37,6 +41,6 @@ class ClasificarDeudores extends Command
             }
         }
 
-        $this->info("Clasificación completada: $deudores deudores nuevos, $rezagados rezagados nuevos.");
+        $this->info("Clasificación completada: {$deudores} deudores nuevos, {$rezagados} rezagados nuevos. Total préstamos vencidos: {$prestamosVencidos->count()}");
     }
 }

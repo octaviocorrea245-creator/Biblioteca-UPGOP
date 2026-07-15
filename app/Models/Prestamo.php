@@ -4,11 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class Prestamo extends Model
 {
     use HasFactory;
+
+    // Estados del préstamo
+    public const ACTIVO = 'Activo';
+    public const DEVUELTO = 'Devuelto';
+    public const VENCIDO = 'Vencido';
 
     protected $fillable = [
         'folio',
@@ -25,30 +31,71 @@ class Prestamo extends Model
     ];
 
     protected $casts = [
-        'fecha_prestamo'            => 'date',
+        'fecha_prestamo' => 'date',
         'fecha_devolucion_esperada' => 'date',
-        'fecha_devolucion_real'     => 'date',
+        'fecha_devolucion_real' => 'date',
     ];
 
-    public function carrera()
+    public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
     }
 
-    public function alumno()
+    public function alumno(): BelongsTo
     {
         return $this->belongsTo(Alumno::class);
     }
 
-    public function libro()
+    public function libro(): BelongsTo
     {
         return $this->belongsTo(Libro::class);
     }
 
-    // Genera el siguiente folio para una carrera específica
+    // Scope para préstamos activos
+    public function scopeActivos($query)
+    {
+        return $query->whereRaw('LOWER(estado) = ?', ['activo']);
+    }
+
+    // Genera el siguiente folio para una carrera
     public static function siguienteFolio($carrera_id): int
     {
         $ultimo = self::where('carrera_id', $carrera_id)->max('folio');
+
         return $ultimo ? $ultimo + 1 : 1;
+    }
+
+    // Métodos auxiliares
+    public function estaActivo(): bool
+    {
+        return $this->estado === self::ACTIVO;
+    }
+
+    public function estaDevuelto(): bool
+    {
+        return $this->estado === self::DEVUELTO;
+    }
+
+    public function estaVencido(): bool
+    {
+        return $this->estado === self::ACTIVO
+            && now()->greaterThan($this->fecha_devolucion_esperada);
+    }
+    
+
+    public function scopeVencidos($query)
+    {
+        return $query->whereRaw('LOWER(estado) = ?', ['vencido']);
+    }
+
+    public function scopeDevueltos($query)
+    {
+        return $query->whereRaw('LOWER(estado) = ?', ['devuelto']);
+    }
+
+    public function scopeProximosAVencer($query, int $dias = 3)
+    {
+        return $query->activos()
+            ->whereDate('fecha_devolucion_esperada', '<=', now()->addDays($dias));
     }
 }

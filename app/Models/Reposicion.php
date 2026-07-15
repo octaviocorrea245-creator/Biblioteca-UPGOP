@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class Reposicion extends Model
 {
@@ -30,22 +32,22 @@ class Reposicion extends Model
         'monto'         => 'decimal:2',
     ];
 
-    public function prestamo()
+    public function prestamo(): BelongsTo
     {
         return $this->belongsTo(Prestamo::class);
     }
 
-    public function alumno()
+    public function alumno(): BelongsTo
     {
         return $this->belongsTo(Alumno::class);
     }
 
-    public function libro()
+    public function libro(): BelongsTo
     {
         return $this->belongsTo(Libro::class);
     }
 
-    public function carrera()
+    public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
     }

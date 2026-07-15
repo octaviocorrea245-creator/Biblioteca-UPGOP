@@ -8,11 +8,20 @@
            class="mb-4 inline-block bg-blue-600 text-white px-4 py-2 rounded">
             + Nueva Donación
         </a>
+        <a href="{{ route('libros.importar.donaciones.form') }}"
+         class="mb-4 inline-block bg-purple-600 text-white px-4 py-2 rounded ml-2">
+            📊 Importar Donaciones Excel
+        </a>
 
         @if(session('success'))
             <div class="mb-4 text-green-600">{{ session('success') }}</div>
         @endif
 
+        <div class="mb-4">
+            <input type="text" id="buscador" placeholder="Buscar por título, autor o donante..."
+                class="w-full border-gray-300 rounded shadow-sm p-2"
+                onkeyup="buscarEnTabla()">
+        </div>
         <table class="w-full bg-white shadow rounded mt-4">
             <thead class="bg-gray-100">
                 <tr>
@@ -47,5 +56,18 @@
                 @endforeach
             </tbody>
         </table>
+        <div class="mt-4">
+            {{ $donaciones->links() }}
+        </div>
     </div>
+    <script>
+        function buscarEnTabla() {
+            const input = document.getElementById('buscador').value.toLowerCase();
+            const filas = document.querySelectorAll('tbody tr');
+            filas.forEach(fila => {
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
 </x-app-layout>

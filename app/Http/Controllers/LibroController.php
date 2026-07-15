@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Libro;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreLibroRequest;
+use App\Http\Requests\UpdateLibroRequest;
 
 class LibroController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $libros = Libro::with('carrera')->get();
+        $query = Libro::with('carrera');
+
+        if ($request->filled('buscar')) {
+            $query->buscar($request->buscar);
+        }
+
+        $libros = $query->paginate(10)->withQueryString();
         return view('libros.index', compact('libros'));
     }
 
@@ -20,22 +28,9 @@ class LibroController extends Controller
         return view('libros.create', compact('carreras'));
     }
 
-    public function store(Request $request)
+    public function store(StoreLibroRequest $request)
     {
-        $request->validate([
-            'carrera_id'          => 'required|exists:carreras,id',
-            'codigo'              => 'required|string|unique:libros',
-            'tipo'                => 'required|in:Regular,Donado,Adquirido',
-            'titulo'              => 'required|string',
-            'autor'               => 'required|string',
-            'editorial'           => 'required|string',
-            'codigo_barras'       => 'nullable|string',
-            'localizacion'        => 'nullable|string',
-            'cantidad_total'      => 'required|integer|min:1',
-            'cantidad_disponible' => 'required|integer|min:0',
-        ]);
-
-        Libro::create($request->all());
+        Libro::create($request->validated());
         return redirect()->route('libros.index')->with('success', 'Libro registrado correctamente.');
     }
 
@@ -45,22 +40,9 @@ class LibroController extends Controller
         return view('libros.edit', compact('libro', 'carreras'));
     }
 
-    public function update(Request $request, Libro $libro)
+    public function update(UpdateLibroRequest $request, Libro $libro)
     {
-        $request->validate([
-            'carrera_id'          => 'required|exists:carreras,id',
-            'codigo'              => 'required|string|unique:libros,codigo,' . $libro->id,
-            'tipo'                => 'required|in:Regular,Donado,Adquirido',
-            'titulo'              => 'required|string',
-            'autor'               => 'required|string',
-            'editorial'           => 'required|string',
-            'codigo_barras'       => 'nullable|string',
-            'localizacion'        => 'nullable|string',
-            'cantidad_total'      => 'required|integer|min:1',
-            'cantidad_disponible' => 'required|integer|min:0',
-        ]);
-
-        $libro->update($request->all());
+        $libro->update($request->validated());
         return redirect()->route('libros.index')->with('success', 'Libro actualizado correctamente.');
     }
 
@@ -69,4 +51,395 @@ class LibroController extends Controller
         $libro->delete();
         return redirect()->route('libros.index')->with('success', 'Libro eliminado.');
     }
+
+    public function importarForm()
+    {
+        $carreras = Carrera::where('activa', true)->get();
+        return view('libros.importar', compact('carreras'));
+    }
+
+    public function importar(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'archivo' => 'required|mimes:xlsx,xls,csv',
+            'hoja'    => 'nullable|string',
+        ]);
+
+        $archivo = $request->file('archivo');
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo->getPathname());
+
+        if ($request->hoja) {
+            $hoja = $spreadsheet->getSheetByName($request->hoja);
+            if (!$hoja) {
+                return back()->withErrors(['hoja' => "No se encontró la hoja '{$request->hoja}' en el archivo."]);
+            }
+        } else {
+            $hoja = $spreadsheet->getActiveSheet();
+        }
+
+        $filas = $hoja->toArray();
+        array_shift($filas); // quitar encabezados
+
+        $insertados = 0;
+        $omitidos   = 0;
+        $errores    = [];
+        $carrerasCreadas = [];
+
+        foreach ($filas as $i => $fila) {
+            // Columnas reales: CARRERA, CANT, TITULO, LOC, AUTOR, EDITORIAL, OBSERV., CODIGO_BARRAS, PROVEEDOR
+            $claveCarrera   = \Illuminate\Support\Str::limit(strip_tags(trim($fila[0] ?? '')), 50, '');
+            $cantidad       = $fila[1] ?? 1;
+            $titulo         = \Illuminate\Support\Str::limit(strip_tags(trim($fila[2] ?? '')), 255, '');
+            $localizacion   = \Illuminate\Support\Str::limit(strip_tags(trim($fila[3] ?? '')), 100, '');
+            $autor          = \Illuminate\Support\Str::limit(strip_tags(trim($fila[4] ?? '')), 255, '');
+            $editorial      = \Illuminate\Support\Str::limit(strip_tags(trim($fila[5] ?? '')), 255, '');
+            $observacion    = \Illuminate\Support\Str::limit(strip_tags(trim($fila[6] ?? '')), 255, '');
+            $codigoBarras   = \Illuminate\Support\Str::limit(strip_tags(trim($fila[7] ?? '')), 100, '');
+            $proveedor      = \Illuminate\Support\Str::limit(strip_tags(trim($fila[8] ?? '')), 255, '');
+
+            // Saltar filas vacías o sin título
+            // Saltar solo si no hay título (fila realmente vacía)
+            if (empty($titulo)) {
+                continue;
+            }
+
+            // Si no tiene código de barras, generamos uno interno temporal
+            if (empty($codigoBarras)) {
+                $codigoBarras = 'SIN-CB-' . str_pad($i + 2, 5, '0', STR_PAD_LEFT);
+            }
+
+            // Evitar duplicados por código de barras
+            if (\App\Models\Libro::where('codigo_barras', $codigoBarras)->exists()) {
+                $omitidos++;
+                continue;
+            }
+
+            // Buscar o crear la carrera según la clave del Excel
+            $carrera_id = null;
+            if (!empty($claveCarrera)) {
+                $carrera = \App\Models\Carrera::where('clave', $claveCarrera)->first();
+
+                if (!$carrera) {
+                    $carrera = \App\Models\Carrera::create([
+                        'clave'  => $claveCarrera,
+                        'nombre' => $claveCarrera, // se puede editar después desde el módulo de Carreras
+                        'activa' => true,
+                    ]);
+                    $carrerasCreadas[] = $claveCarrera;
+                }
+
+                $carrera_id = $carrera->id;
+            }
+
+            try {
+                \App\Models\Libro::create([
+                    'carrera_id'          => $carrera_id,
+                    'codigo'              => 'LIB-' . $codigoBarras,
+                    'tipo'                => 'Regular',
+                    'titulo'              => $titulo,
+                    'autor'               => $autor ?: 'Sin autor',
+                    'editorial'           => $editorial ?: 'Sin editorial',
+                    'codigo_barras'       => $codigoBarras,
+                    'localizacion'        => $localizacion ?: null,
+                    'cantidad_total'      => is_numeric($cantidad) ? $cantidad : 1,
+                    'cantidad_disponible' => is_numeric($cantidad) ? $cantidad : 1,
+                ]);
+                $insertados++;
+            } catch (\Exception $e) {
+                $errores[] = "Fila " . ($i + 2) . ": " . $e->getMessage();
+            }
+        }
+
+        $mensaje = "$insertados libros importados correctamente.";
+        if ($omitidos > 0) {
+            $mensaje .= " $omitidos omitidos por código de barras duplicado.";
+        }
+        if (count($carrerasCreadas) > 0) {
+            $mensaje .= " Carreras creadas automáticamente: " . implode(', ', array_unique($carrerasCreadas)) . ".";
+        }
+        if (count($errores) > 0) {
+            $mensaje .= " " . count($errores) . " filas con error.";
+        }
+        \Log::info('Importación de libros - Detalle', [
+            'insertados' => $insertados,
+            'omitidos_duplicados' => $omitidos,
+            'errores' => $errores,
+            'carreras_creadas' => $carrerasCreadas,
+        ]);
+
+        return redirect()->route('libros.index')->with('success', $mensaje);
+    }
+    public function plantilla()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $hoja = $spreadsheet->getActiveSheet();
+
+        $encabezados = ['codigo_barras', 'tipo', 'titulo', 'autor', 'editorial', 'localizacion', 'cantidad_total', 'cantidad_disponible', 'costo'];
+        $hoja->fromArray($encabezados, null, 'A1');
+
+        $hoja->fromArray(['7501234567890', 'Regular', 'Cálculo Diferencial', 'James Stewart', 'Cengage', 'Estante A1', 3, 3, 450.00], null, 'A2');
+
+        foreach (range('A', 'I') as $col) {
+            $hoja->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $nombreArchivo = "plantilla_libros.xlsx";
+        $rutaTemp = storage_path("app/{$nombreArchivo}");
+        $writer->save($rutaTemp);
+
+        return response()->download($rutaTemp)->deleteFileAfterSend(true);
+    }
+    public function pendientesCodigoBarras(\Illuminate\Http\Request $request)
+    {
+        $query = Libro::with('carrera')->where('codigo_barras', 'like', 'SIN-CB-%');
+
+        if ($request->filled('buscar')) {
+            $buscar = $request->buscar;
+            $query->where(function($q) use ($buscar) {
+                $q->where('titulo', 'like', "%{$buscar}%")
+                ->orWhere('autor', 'like', "%{$buscar}%");
+            });
+        }
+
+        $libros = $query->paginate(10)->withQueryString();
+        return view('libros.pendientes', compact('libros'));
+    }
+
+    public function actualizarCodigoBarras(\Illuminate\Http\Request $request, Libro $libro)
+    {
+        $request->validate([
+            'codigo_barras' => 'required|string|unique:libros,codigo_barras,' . $libro->id,
+        ]);
+
+        $libro->update([
+            'codigo_barras' => $request->codigo_barras,
+        ]);
+
+        return redirect()->route('libros.pendientes')->with('success', "Código de barras actualizado para '{$libro->titulo}'.");
+    }
+    public function buscarPorCodigoBarras(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'codigo_barras' => 'required|string|max:100',
+        ]);
+
+        $libro = Libro::where('codigo_barras', trim($request->codigo_barras))
+            ->where('cantidad_disponible', '>', 0)
+            ->first();
+
+        if (!$libro) {
+            return response()->json(['encontrado' => false]);
+        }
+
+        return response()->json([
+            'encontrado' => true,
+            'id'         => $libro->id,
+            'titulo'     => $libro->titulo,
+            'codigo'     => $libro->codigo,
+            'disponible' => $libro->cantidad_disponible,
+        ]);
+    }
+    public function importarDonacionesForm()
+{
+    return view('libros.importar_donaciones');
+}
+
+public function importarDonaciones(\Illuminate\Http\Request $request)
+{
+    $request->validate([
+        'archivo' => 'required|mimes:xlsx,xls,csv',
+        'hoja'    => 'nullable|string',
+    ]);
+
+    $archivo = $request->file('archivo');
+    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo->getPathname());
+
+    if ($request->hoja) {
+        $hoja = $spreadsheet->getSheetByName($request->hoja);
+        if (!$hoja) {
+            return back()->withErrors(['hoja' => "No se encontró la hoja '{$request->hoja}'."]);
+        }
+    } else {
+        $hoja = $spreadsheet->getActiveSheet();
+    }
+
+    $filas = $hoja->toArray();
+    array_shift($filas);
+
+    $insertados = 0;
+    $omitidos   = 0;
+    $errores    = [];
+    $carrerasCreadas = [];
+
+    foreach ($filas as $i => $fila) {
+        $claveCarrera = \Illuminate\Support\Str::limit(strip_tags(trim($fila[0] ?? '')), 50, '');
+        $cantidad     = $fila[1] ?? 1;
+        $titulo       = \Illuminate\Support\Str::limit(strip_tags(trim($fila[2] ?? '')), 255, '');
+        $localizacion = \Illuminate\Support\Str::limit(strip_tags(trim($fila[3] ?? '')), 100, '');
+        $autor        = \Illuminate\Support\Str::limit(strip_tags(trim($fila[4] ?? '')), 255, '');
+        $editorial    = \Illuminate\Support\Str::limit(strip_tags(trim($fila[5] ?? '')), 255, '');
+        $codigoBarras = \Illuminate\Support\Str::limit(strip_tags(trim($fila[7] ?? '')), 100, '');
+
+        if (empty($titulo)) continue;
+
+        if (empty($codigoBarras) || strtoupper($codigoBarras) === 'S/C') {
+            $codigoBarras = 'DON-SIN-CB-' . str_pad($i + 2, 5, '0', STR_PAD_LEFT);
+        }
+
+        if (\App\Models\Libro::where('codigo_barras', $codigoBarras)->exists()) {
+            $omitidos++;
+            continue;
+        }
+
+        $carrera_id = null;
+        if (!empty($claveCarrera)) {
+            $carrera = \App\Models\Carrera::where('clave', $claveCarrera)->first();
+            if (!$carrera) {
+                $carrera = \App\Models\Carrera::create([
+                    'clave'  => $claveCarrera,
+                    'nombre' => $claveCarrera,
+                    'activa' => true,
+                ]);
+                $carrerasCreadas[] = $claveCarrera;
+            }
+            $carrera_id = $carrera->id;
+        }
+
+        try {
+            \DB::transaction(function() use (
+                $carrera_id, $codigoBarras, $titulo, $autor,
+                $editorial, $localizacion, $cantidad
+            ) {
+                \App\Models\Libro::create([
+                    'carrera_id'          => $carrera_id,
+                    'codigo'              => 'DON-' . $codigoBarras,
+                    'tipo'                => 'Donado',
+                    'titulo'              => $titulo,
+                    'autor'               => $autor ?: 'Sin autor',
+                    'editorial'           => $editorial ?: 'Sin editorial',
+                    'codigo_barras'       => $codigoBarras,
+                    'localizacion'        => $localizacion ?: null,
+                    'cantidad_total'      => is_numeric($cantidad) ? (int)$cantidad : 1,
+                    'cantidad_disponible' => is_numeric($cantidad) ? (int)$cantidad : 1,
+                ]);
+
+                $codigoDonacion = \App\Models\Donacion::generarCodigo(date('Y'));
+                \App\Models\Donacion::create([
+                    'carrera_id'        => $carrera_id,
+                    'codigo_donacion'   => $codigoDonacion,
+                    'titulo'            => $titulo,
+                    'autor'             => $autor ?: 'Sin autor',
+                    'editorial'         => $editorial ?: 'Sin editorial',
+                    'codigo_barras'     => $codigoBarras,
+                    'costo'             => null,
+                    'fecha'             => now()->toDateString(),
+                    'alumno_donante'    => 'Donación institucional',
+                    'matricula_donante' => 'N/A',
+                    'cuatrimestre'      => date('Y') . '-1',
+                    'generacion'        => date('Y'),
+                ]);
+            });
+            $insertados++;
+        } catch (\Exception $e) {
+            $errores[] = "Fila " . ($i + 2) . ": " . $e->getMessage();
+        }
+    }
+
+    $mensaje = "$insertados libros donados importados correctamente.";
+    if ($omitidos > 0) $mensaje .= " $omitidos omitidos por código duplicado.";
+    if (count($carrerasCreadas) > 0) $mensaje .= " Carreras creadas: " . implode(', ', array_unique($carrerasCreadas)) . ".";
+    if (count($errores) > 0) $mensaje .= " " . count($errores) . " filas con error.";
+
+    return redirect()->route('donaciones.index')->with('success', $mensaje);
+}
+
+public function importarDonacionesAntiguas(\Illuminate\Http\Request $request)
+{
+    $request->validate([
+        'archivo' => 'required|mimes:xlsx,xls,csv',
+        'hoja'    => 'nullable|string',
+    ]);
+
+    $archivo = $request->file('archivo');
+    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo->getPathname());
+
+    if ($request->hoja) {
+        $hoja = $spreadsheet->getSheetByName($request->hoja);
+        if (!$hoja) {
+            return back()->withErrors(['hoja' => "No se encontró la hoja '{$request->hoja}'."]);
+        }
+    } else {
+        $hoja = $spreadsheet->getActiveSheet();
+    }
+
+    $filas = $hoja->toArray();
+    array_shift($filas);
+    array_shift($filas);
+
+    $insertados = 0;
+    $omitidos   = 0;
+    $errores    = [];
+
+    foreach ($filas as $i => $fila) {
+        $titulo       = \Illuminate\Support\Str::limit(strip_tags(trim($fila[1] ?? '')), 255, '');
+        $autor        = \Illuminate\Support\Str::limit(strip_tags(trim($fila[2] ?? '')), 255, '');
+        $editorial    = \Illuminate\Support\Str::limit(strip_tags(trim($fila[3] ?? '')), 255, '');
+        $localizacion = \Illuminate\Support\Str::limit(strip_tags(trim($fila[4] ?? '')), 100, '');
+
+        if (empty($titulo)) continue;
+
+        $codigoBarras = 'DON-ANT-' . str_pad($i + 3, 5, '0', STR_PAD_LEFT);
+
+        if (\App\Models\Libro::where('codigo_barras', $codigoBarras)->exists()) {
+            $omitidos++;
+            continue;
+        }
+
+        try {
+            \DB::transaction(function() use (
+                $carrera_id, $codigoBarras, $titulo, $autor,
+                $editorial, $localizacion, $cantidad
+            ) {
+                \App\Models\Libro::create([
+                    'carrera_id'          => $carrera_id,
+                    'codigo'              => 'DON-' . $codigoBarras,
+                    'tipo'                => 'Donado',
+                    'titulo'              => $titulo,
+                    'autor'               => $autor ?: 'Sin autor',
+                    'editorial'           => $editorial ?: 'Sin editorial',
+                    'codigo_barras'       => $codigoBarras,
+                    'localizacion'        => $localizacion ?: null,
+                    'cantidad_total'      => is_numeric($cantidad) ? (int)$cantidad : 1,
+                    'cantidad_disponible' => is_numeric($cantidad) ? (int)$cantidad : 1,
+                ]);
+
+                $codigoDonacion = \App\Models\Donacion::generarCodigo(date('Y'));
+                \App\Models\Donacion::create([
+                    'carrera_id'        => $carrera_id,
+                    'codigo_donacion'   => $codigoDonacion,
+                    'titulo'            => $titulo,
+                    'autor'             => $autor ?: 'Sin autor',
+                    'editorial'         => $editorial ?: 'Sin editorial',
+                    'codigo_barras'     => $codigoBarras,
+                    'costo'             => null,
+                    'fecha'             => now()->toDateString(),
+                    'alumno_donante'    => 'Donación institucional',
+                    'matricula_donante' => 'N/A',
+                    'cuatrimestre'      => date('Y') . '-1',
+                    'generacion'        => date('Y'),
+                ]);
+            });
+            $insertados++;
+        } catch (\Exception $e) {
+            $errores[] = "Fila " . ($i + 2) . ": " . $e->getMessage();
+        }
+    }
+
+    $mensaje = "$insertados libros donados antiguos importados correctamente.";
+    if ($omitidos > 0) $mensaje .= " $omitidos omitidos.";
+    if (count($errores) > 0) $mensaje .= " " . count($errores) . " filas con error.";
+
+    return redirect()->route('donaciones.index')->with('success', $mensaje);
+}
 }

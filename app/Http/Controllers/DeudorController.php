@@ -7,15 +7,15 @@ use Illuminate\Http\Request;
 
 class DeudorController extends Controller
 {
-    public function index()
+   public function index()
     {
-        $deudores  = Alumno::with(['carrera', 'prestamos' => function($q) {
-            $q->where('estado', 'Vencido');
-        }])->where('estado', 'Deudor')->get();
+        $deudores = Alumno::deudores()->with(['carrera', 'prestamos' => function($q) {
+            $q->vencidos();
+        }])->get();
 
-        $rezagados = Alumno::with(['carrera', 'prestamos' => function($q) {
-            $q->where('estado', 'Vencido');
-        }])->where('estado', 'Rezagado')->get();
+        $rezagados = Alumno::rezagados()->with(['carrera', 'prestamos' => function($q) {
+            $q->vencidos();
+        }])->get();
 
         return view('deudores.index', compact('deudores', 'rezagados'));
     }

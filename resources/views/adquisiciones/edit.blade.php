@@ -8,6 +8,13 @@
             @csrf
             @method('PUT')
             <div class="mb-4">
+                 <label class="block text-sm font-medium text-gray-700">Código de adquisición</label>
+                <div class="mt-1 flex items-center gap-2">
+                    <span style="background:#1A56B0; color:#fff; padding:.3rem .8rem; border-radius:20px; font-size:.82rem; font-weight:600;">
+                        {{ $adquisicion->codigo_adquisicion }}
+                    </span>
+                    <span class="text-xs text-gray-400">Generado automáticamente — no editable</span>
+                </div>
                 <label class="block text-sm font-medium text-gray-700">Carrera</label>
                 <select name="carrera_id" class="mt-1 block w-full border-gray-300 rounded shadow-sm">
                     <option value="">-- Selecciona --</option>

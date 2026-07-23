@@ -6,10 +6,8 @@ use App\Models\Prestamo;
 use App\Models\Alumno;
 use App\Models\Libro;
 use App\Models\Carrera;
-use Illuminate\Http\Request;
-use Carbon\Carbon;
 use App\Http\Requests\StorePrestamoRequest;
-
+use Illuminate\Http\Request;
 
 class PrestamoController extends Controller
 {
@@ -27,22 +25,31 @@ class PrestamoController extends Controller
         return view('prestamos.create', compact('alumnos', 'libros', 'carreras'));
     }
 
-   public function store(StorePrestamoRequest $request)
+    public function store(StorePrestamoRequest $request)
     {
         $validated = $request->validated();
 
-        $alumno = Alumno::find($validated['alumno_id']);
-        if (strtolower(trim($alumno->estado)) === 'rezagado') {
-            return back()->withErrors(['alumno_id' => 'Este alumno está rezagado y no puede realizar préstamos.'])->withInput();
+        $alumno = Alumno::findOrFail($validated['alumno_id']);
+
+        if (strtolower(trim($alumno->estado)) === strtolower(Alumno::REZAGADO)) {
+            return back()
+                ->withErrors(['alumno_id' => 'Este alumno está rezagado y no puede realizar préstamos.'])
+                ->withInput();
         }
 
         $folio = Prestamo::siguienteFolio($validated['carrera_id']);
-        Prestamo::create(array_merge($validated, ['folio' => $folio]));
 
-        $libro = Libro::find($validated['libro_id']);
+        Prestamo::create(array_merge($validated, [
+            'folio'  => $folio,
+            'estado' => Prestamo::ACTIVO,
+        ]));
+
+        $libro = Libro::findOrFail($validated['libro_id']);
         $libro->decrement('cantidad_disponible');
 
-        return redirect()->route('prestamos.index')->with('success', "Préstamo registrado con folio #$folio.");
+        return redirect()
+            ->route('prestamos.index')
+            ->with('success', "Préstamo registrado con folio #$folio.");
     }
 
     public function show(Prestamo $prestamo)
@@ -50,35 +57,38 @@ class PrestamoController extends Controller
         return view('prestamos.show', compact('prestamo'));
     }
 
-   public function devolver(Prestamo $prestamo)
+    public function devolver(Prestamo $prestamo)
     {
-        if (strtolower(trim($prestamo->estado)) === 'devuelto') {
+        if ($prestamo->estaDevuelto()) {
             return back()->with('error', 'Este préstamo ya fue devuelto.');
         }
 
         $prestamo->update([
-            'estado'                => 'Devuelto',
+            'estado'                => Prestamo::DEVUELTO,
             'fecha_devolucion_real' => now(),
         ]);
 
-        // Restaurar disponibilidad del libro
         $prestamo->libro->increment('cantidad_disponible');
 
-        // Si el alumno estaba como Deudor, vuelve a Activo
-        if (strtolower(trim($prestamo->alumno->estado)) === 'deudor') {
-            $prestamo->alumno->update(['estado' => 'Activo']);
+        if (strtolower(trim($prestamo->alumno->estado)) === strtolower(Alumno::DEUDOR)) {
+            $prestamo->alumno->update(['estado' => Alumno::ACTIVO]);
         }
 
-        return redirect()->route('prestamos.index')->with('success', 'Devolución registrada correctamente.');
+        return redirect()
+            ->route('prestamos.index')
+            ->with('success', 'Devolución registrada correctamente.');
     }
 
     public function destroy(Prestamo $prestamo)
     {
         $prestamo->libro->increment('cantidad_disponible');
         $prestamo->delete();
-        return redirect()->route('prestamos.index')->with('success', 'Préstamo eliminado.');
+
+        return redirect()
+            ->route('prestamos.index')
+            ->with('success', 'Préstamo eliminado.');
     }
-    
+
     public function vale(Prestamo $prestamo)
     {
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('prestamos.vale', compact('prestamo'));

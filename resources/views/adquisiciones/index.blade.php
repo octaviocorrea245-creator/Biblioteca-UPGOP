@@ -22,6 +22,7 @@
         <table class="w-full bg-white shadow rounded mt-4">
             <thead class="bg-gray-100">
                 <tr>
+                    <th class="p-3 text-left">Código</th>
                     <th class="p-3 text-left">Título</th>
                     <th class="p-3 text-left">Autor</th>
                     <th class="p-3 text-left">Carrera</th>
@@ -35,6 +36,7 @@
             <tbody>
                 @foreach($adquisiciones as $adquisicion)
                 <tr class="border-t">
+                    <td class="p-3">{{ $adquisicion->codigo_adquisicion }}</td>
                     <td class="p-3">{{ $adquisicion->titulo }}</td>
                     <td class="p-3">{{ $adquisicion->autor }}</td>
                     <td class="p-3">{{ $adquisicion->carrera->nombre }}</td>

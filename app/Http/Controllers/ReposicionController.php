@@ -44,8 +44,8 @@ class ReposicionController extends Controller
             'observaciones' => $validated['observaciones'] ?? null,
         ]);
 
-        if (strtolower(trim($prestamo->estado)) === 'activo') {
-            $prestamo->update(['estado' => 'Vencido']);
+        if ($prestamo->estaActivo()) {
+            $prestamo->update(['estado' => Prestamo::VENCIDO]);
         }
 
         return redirect()->route('reposiciones.index')->with('success', 'Reposición registrada correctamente.');
@@ -59,9 +59,12 @@ class ReposicionController extends Controller
         ]);
 
         // Si el alumno era Deudor o Rezagado, vuelve a Activo
-        $estadoAlumno = strtolower(trim($reposicion->alumno->estado));
-        if (in_array($estadoAlumno, ['deudor', 'rezagado'])) {
-            $reposicion->alumno->update(['estado' => 'Activo']);
+       $estadoAlumno = strtolower(trim($reposicion->alumno->estado));
+        if (in_array($estadoAlumno, [
+            strtolower(Alumno::DEUDOR),
+            strtolower(Alumno::REZAGADO)
+        ])) {
+            $reposicion->alumno->update(['estado' => Alumno::ACTIVO]);
         }
 
         return redirect()->route('reposiciones.index')->with('success', 'Pago registrado correctamente.');

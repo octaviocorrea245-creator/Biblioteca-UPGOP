@@ -24,8 +24,18 @@ class AdquisicionController extends Controller
 
     public function store(StoreAdquisicionRequest $request)
     {
-        Adquisicion::create($request->validated());
-        return redirect()->route('adquisiciones.index')->with('success', 'Adquisición registrada correctamente.');
+        $validated = $request->validated();
+
+        $anio   = date('Y', strtotime($validated['fecha_factura']));
+        $codigo = Adquisicion::generarCodigo((int)$anio);
+
+        Adquisicion::create(array_merge($validated, [
+            'codigo_adquisicion' => $codigo,
+        ]));
+
+        return redirect()
+            ->route('adquisiciones.index')
+            ->with('success', "Adquisición registrada con código $codigo.");
     }
 
     public function edit(Adquisicion $adquisicion)

@@ -68,18 +68,17 @@ class Prestamo extends Model
     // Métodos auxiliares
     public function estaActivo(): bool
     {
-        return $this->estado === self::ACTIVO;
+        return strtolower(trim($this->estado)) === 'activo';
     }
 
     public function estaDevuelto(): bool
     {
-        return $this->estado === self::DEVUELTO;
+        return strtolower(trim($this->estado)) === 'devuelto';
     }
 
     public function estaVencido(): bool
     {
-        return $this->estado === self::ACTIVO
-            && now()->greaterThan($this->fecha_devolucion_esperada);
+        return strtolower(trim($this->estado)) === 'vencido';
     }
     
 
@@ -98,4 +97,5 @@ class Prestamo extends Model
         return $query->activos()
             ->whereDate('fecha_devolucion_esperada', '<=', now()->addDays($dias));
     }
+    
 }

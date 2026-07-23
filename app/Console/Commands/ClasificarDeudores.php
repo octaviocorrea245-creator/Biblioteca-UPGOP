@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Alumno;
 use App\Models\Prestamo;
 use Illuminate\Console\Command;
-use Carbon\Carbon;
 
 class ClasificarDeudores extends Command
 {
@@ -26,17 +25,17 @@ class ClasificarDeudores extends Command
 
             foreach ($prestamosVencidos as $prestamo) {
             // Marcar préstamo como Vencido
-            $prestamo->update(['estado' => 'Vencido']);
-
+            $prestamo->update(['estado' => Prestamo::VENCIDO]);
+            
             $alumno = $prestamo->alumno;
 
             if (!$alumno) continue;
 
-            if ($alumno->estado === 'Activo') {
-                $alumno->update(['estado' => 'Deudor']);
+            if ($alumno->estado === Alumno::ACTIVO) {
+                $alumno->update(['estado' => Alumno::DEUDOR]);
                 $deudores++;
-            } elseif ($alumno->estado === 'Deudor') {
-                $alumno->update(['estado' => 'Rezagado']);
+            } elseif ($alumno->estado === Alumno::DEUDOR) {
+                $alumno->update(['estado' => Alumno::REZAGADO]);
                 $rezagados++;
             }
         }

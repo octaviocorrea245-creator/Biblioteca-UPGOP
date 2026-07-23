@@ -1,5 +1,4 @@
 <x-app-layout>
-<<<<<<< HEAD
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Dashboard') }}
@@ -14,7 +13,6 @@
                 </div>
             </div>
         </div>
-=======
     <x-slot name="header">Dashboard</x-slot>
 
     <style>
@@ -301,7 +299,6 @@
             <div class="mod-name">Deudores</div>
             <div class="mod-desc">Ver deudores</div>
         </a>
->>>>>>> e457021ea82fbed4256465eab0b8d4a95f667977
     </div>
     <div class="section-divider"></div>
 

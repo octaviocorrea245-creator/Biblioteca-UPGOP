@@ -13,39 +13,36 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReposicionController;
 
 
-
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
 Route::get('/dashboard', function () {
-<<<<<<< HEAD
-    return view('dashboard');
-=======
     return view('dashboard', [
-        'totalLibros'          => \App\Models\Libro::count(),
-        'librosDisponibles'    => \App\Models\Libro::where('cantidad_disponible', '>', 0)->count(),
-        'totalAlumnos'         => \App\Models\Alumno::count(),
-        'alumnosActivos'       => \App\Models\Alumno::where('estado', 'Activo')->count(),
-        'prestamosActivos'  => \App\Models\Prestamo::activos()->count(),      
+        'totalLibros' => \App\Models\Libro::count(),
+        'librosDisponibles' => \App\Models\Libro::where('cantidad_disponible', '>', 0)->count(),
+        'totalAlumnos' => \App\Models\Alumno::count(),
+        'alumnosActivos' => \App\Models\Alumno::activos()->count(),
+        'prestamosActivos' => \App\Models\Prestamo::activos()->count(),
         'prestamosVencidos' => \App\Models\Prestamo::vencidos()->count(),
-        'deudores'             => \App\Models\Alumno::deudores()->count(),
-        'rezagados'            => \App\Models\Alumno::rezagados()->count(),
-        'donaciones'           => \App\Models\Donacion::count(),
-        'adquisiciones'        => \App\Models\Adquisicion::count(),
-        'reposicionesPend'     => \App\Models\Reposicion::where('estado_pago', 'Pendiente')->count(),
-        'carreras'             => \App\Models\Carrera::where('activa', true)->count(),
-        'proximosVencer'    => \App\Models\Prestamo::with(['alumno', 'libro'])
-                            ->proximosAVencer(3)
-                            ->orderBy('fecha_devolucion_esperada')
-                            ->get(),
-        'ultimosPrestamos'     => \App\Models\Prestamo::with(['alumno', 'libro'])
-                                    ->latest()
-                                    ->take(5)
-                                    ->get(),
+        'deudores' => \App\Models\Alumno::deudores()->count(),
+        'rezagados' => \App\Models\Alumno::rezagados()->count(),
+        'donaciones' => \App\Models\Donacion::count(),
+        'adquisiciones' => \App\Models\Adquisicion::count(),
+        'reposicionesPend' => \App\Models\Reposicion::where('estado_pago', 'Pendiente')->count(),
+        'carreras' => \App\Models\Carrera::where('activa', true)->count(),
+
+        'proximosVencer' => \App\Models\Prestamo::with(['alumno','libro'])
+            ->proximosAVencer(3)
+            ->orderBy('fecha_devolucion_esperada')
+            ->get(),
+
+        'ultimosPrestamos' => \App\Models\Prestamo::with(['alumno','libro'])
+            ->latest()
+            ->take(5)
+            ->get(),
     ]);
->>>>>>> e457021ea82fbed4256465eab0b8d4a95f667977
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth','verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

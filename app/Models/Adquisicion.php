@@ -14,6 +14,7 @@ class Adquisicion extends Model
     protected $table = 'adquisiciones';
 
     protected $fillable = [
+        'codigo_adquisicion',
         'carrera_id',
         'cantidad',
         'titulo',
@@ -36,5 +37,11 @@ class Adquisicion extends Model
     public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
+    }
+    public static function generarCodigo(int $anio): string
+    {
+        $ultimo = self::where('codigo_adquisicion', 'like', "A-{$anio}-%")->max('id');
+        $consecutivo = str_pad(($ultimo ? $ultimo + 1 : 1), 3, '0', STR_PAD_LEFT);
+        return "A-{$anio}-{$consecutivo}";
     }
 }

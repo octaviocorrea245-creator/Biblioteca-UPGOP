@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Alumno extends Model
 {
-    public const ACTIVO = 'Activo';
-    public const DEUDOR = 'Deudor';
-    public const REZAGADO = 'Rezagado';
+    const ACTIVO   = 'Activo';
+    const DEUDOR   = 'Deudor';
+    const REZAGADO = 'Rezagado';
     
     protected $fillable = [
         'carrera_id',

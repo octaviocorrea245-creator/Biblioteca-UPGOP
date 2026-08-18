@@ -42,7 +42,12 @@ class AlumnoController extends Controller
 
     public function destroy(Alumno $alumno)
     {
+        if ($alumno->prestamos()->exists()) {
+            return redirect()->route('alumnos.index')
+                ->with('error', 'No se puede eliminar al alumno "' . $alumno->nombre . '" porque tiene préstamos registrados.');
+        }
+
         $alumno->delete();
-        return redirect()->route('alumnos.index')->with('success', 'Alumno eliminado.');
+        return redirect()->route('alumnos.index')->with('success', 'Alumno eliminado correctamente.');
     }
 }

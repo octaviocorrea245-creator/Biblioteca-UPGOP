@@ -39,7 +39,12 @@ class CarreraController extends Controller
 
     public function destroy(Carrera $carrera)
     {
+        if ($carrera->alumnos()->exists() || $carrera->libros()->exists()) {
+            return redirect()->route('carreras.index')
+                ->with('error', 'No se puede eliminar la carrera "' . $carrera->nombre . '" porque tiene alumnos o libros asociados.');
+        }
+
         $carrera->delete();
-        return redirect()->route('carreras.index')->with('success', 'Carrera eliminada.');
+        return redirect()->route('carreras.index')->with('success', 'Carrera eliminada correctamente.');
     }
 }

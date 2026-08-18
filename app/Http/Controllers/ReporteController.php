@@ -49,7 +49,7 @@ class ReporteController extends Controller
                     'libro_codigo'     => $prestamo->libro->codigo,
                     'carrera'          => $prestamo->carrera->nombre,
                     'fecha_prestamo'   => $prestamo->fecha_prestamo?->toDateString(),
-                    'fecha_devolucion' => $prestamo->fecha_devolucion?->toDateString(),
+                    'fecha_devolucion_esperada' => $prestamo->fecha_devolucion_esperada?->toDateString(),
                     'estado'           => $prestamo->estado,
                 ];
             })->toArray();
@@ -104,7 +104,7 @@ class ReporteController extends Controller
                     'libro_codigo'     => $prestamo->libro->codigo,
                     'carrera'          => $prestamo->carrera->nombre,
                     'fecha_prestamo'   => $prestamo->fecha_prestamo?->toDateString(),
-                    'fecha_devolucion' => $prestamo->fecha_devolucion?->toDateString(),
+                    'fecha_devolucion_esperada' => $prestamo->fecha_devolucion_esperada?->toDateString(),
                     'estado'           => $prestamo->estado,
                 ];
             })->toArray();
@@ -309,8 +309,8 @@ public function prestamosMensualesExcel(Request $request)
             $p->alumno->matricula,
             $p->libro->titulo,
             $p->carrera->nombre,
-            $p->fecha_prestamo->format('d/m/Y'),
-            $p->fecha_devolucion_esperada->format('d/m/Y'),
+            $p->fecha_prestamo?->format('d/m/Y') ?? '',
+            $p->fecha_devolucion_esperada?->format('d/m/Y') ?? '',
             $p->estado,
         ], null, "A{$fila}");
         $fila++;
@@ -344,7 +344,7 @@ public function deudoresExcel()
         $hoja->fromArray([
             $alumno->matricula,
             $alumno->nombre,
-            $alumno->carrera->nombre,
+            $alumno->carrera?->nombre ?? '',
             $alumno->prestamos->count(),
         ], null, "A{$fila}");
         $fila++;
@@ -377,7 +377,7 @@ public function rezagadosExcel()
         $hoja->fromArray([
             $alumno->matricula,
             $alumno->nombre,
-            $alumno->carrera->nombre,
+            $alumno->carrera?->nombre ?? '',
             $alumno->prestamos->count(),
         ], null, "A{$fila}");
         $fila++;
@@ -422,8 +422,8 @@ public function donacionesExcel(Request $request)
             $d->autor,
             $d->alumno_donante,
             $d->matricula_donante,
-            $d->carrera->nombre,
-            $d->fecha->format('d/m/Y'),
+            $d->carrera?->nombre ?? '',
+            $d->fecha?->format('d/m/Y') ?? '',
             $d->costo,
         ], null, "A{$fila}");
         $fila++;
@@ -465,11 +465,11 @@ public function donacionesExcel(Request $request)
                 $hoja->fromArray([
                     $a->titulo,
                     $a->autor,
-                    $a->carrera->nombre,
+                    $a->carrera?->nombre ?? '',
                     $a->cantidad,
                     $a->proveedor,
                     $a->factura,
-                    $a->fecha_factura->format('d/m/Y'),
+                    $a->fecha_factura?->format('d/m/Y') ?? '',
                     $a->costo,
                 ], null, "A{$fila}");
                 $fila++;

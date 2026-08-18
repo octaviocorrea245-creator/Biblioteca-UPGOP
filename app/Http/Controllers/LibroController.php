@@ -48,8 +48,14 @@ class LibroController extends Controller
 
     public function destroy(Libro $libro)
     {
+        // Verificar si el libro tiene préstamos asociados
+        if ($libro->prestamos()->exists()) {
+            return redirect()->route('libros.index')
+                ->with('error', 'No se puede eliminar el libro "' . $libro->titulo . '" porque tiene préstamos registrados. Devuelve o cancela los préstamos primero.');
+        }
+
         $libro->delete();
-        return redirect()->route('libros.index')->with('success', 'Libro eliminado.');
+        return redirect()->route('libros.index')->with('success', 'Libro eliminado correctamente.');
     }
 
     public function importarForm()
@@ -173,22 +179,161 @@ class LibroController extends Controller
     {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $hoja = $spreadsheet->getActiveSheet();
+        $hoja->setTitle('Libros');
 
-        $encabezados = ['codigo_barras', 'tipo', 'titulo', 'autor', 'editorial', 'localizacion', 'cantidad_total', 'cantidad_disponible', 'costo'];
+        // Orden exacto que lee el importador (fila[0]..fila[8])
+        $encabezados = [
+            'clave_carrera',   // fila[0]
+            'cantidad',        // fila[1]
+            'titulo',          // fila[2]
+            'localizacion',    // fila[3]
+            'autor',           // fila[4]
+            'editorial',       // fila[5]
+            'observacion',     // fila[6]
+            'codigo_barras',   // fila[7]
+            'proveedor',       // fila[8]
+        ];
         $hoja->fromArray($encabezados, null, 'A1');
 
-        $hoja->fromArray(['7501234567890', 'Regular', 'Cálculo Diferencial', 'James Stewart', 'Cengage', 'Estante A1', 3, 3, 450.00], null, 'A2');
+        // Fila de ejemplo
+        $hoja->fromArray([
+            'IAEV', 2, 'Cálculo Diferencial', 'Estante A1',
+            'James Stewart', 'Cengage', '', '7501234567890', 'Editorial Mc',
+        ], null, 'A2');
 
-        foreach (range('A', 'I') as $col) {
-            $hoja->getColumnDimension($col)->setAutoSize(true);
+        // Estilo encabezado: fondo navy, texto blanco, negrita
+        $styleHead = [
+            'font'      => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['argb' => 'FF0D1B35']],
+            'alignment' => ['horizontal' => 'center'],
+            'borders'   => ['bottom' => ['borderStyle' => 'thin', 'color' => ['argb' => 'FF1A56B0']]],
+        ];
+        $hoja->getStyle('A1:I1')->applyFromArray($styleHead);
+
+        // Fila ejemplo en gris claro
+        $hoja->getStyle('A2:I2')->applyFromArray([
+            'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFF0F4FA']],
+            'font' => ['italic' => true, 'color' => ['argb' => 'FF8496B0']],
+        ]);
+
+        // Hoja de instrucciones
+        $info = $spreadsheet->createSheet();
+        $info->setTitle('Instrucciones');
+        $info->setCellValue('A1', 'INSTRUCCIONES — Plantilla de Carga Masiva de Libros');
+        $info->setCellValue('A3', 'Columna');
+        $info->setCellValue('B3', 'Campo');
+        $info->setCellValue('C3', 'Descripción');
+        $info->setCellValue('D3', '¿Obligatorio?');
+        $filas = [
+            ['A', 'clave_carrera', 'Clave de la carrera (ej: IAEV, LNI, LMAD). Si no existe se crea automáticamente.', 'No'],
+            ['B', 'cantidad', 'Número de ejemplares del libro. Si se omite, se asume 1.', 'No'],
+            ['C', 'titulo', 'Título completo del libro.', 'SÍ'],
+            ['D', 'localizacion', 'Estante o lugar físico (ej: Estante A1, Bodega 3).', 'No'],
+            ['E', 'autor', 'Nombre del autor o autores.', 'No'],
+            ['F', 'editorial', 'Editorial del libro.', 'No'],
+            ['G', 'observacion', 'Notas internas, estado del libro, etc.', 'No'],
+            ['H', 'codigo_barras', 'Código de barras físico. Si está vacío se genera uno interno.', 'No'],
+            ['I', 'proveedor', 'Proveedor o fuente de adquisición.', 'No'],
+        ];
+        $row = 4;
+        foreach ($filas as $f) {
+            $info->setCellValue("A{$row}", $f[0]);
+            $info->setCellValue("B{$row}", $f[1]);
+            $info->setCellValue("C{$row}", $f[2]);
+            $info->setCellValue("D{$row}", $f[3]);
+            $row++;
         }
+        $info->getStyle('A1')->applyFromArray(['font' => ['bold' => true, 'size' => 12]]);
+        $info->getStyle('A3:D3')->applyFromArray(['font' => ['bold' => true]]);
+        foreach (['A','B','C','D'] as $col) { $info->getColumnDimension($col)->setAutoSize(true); }
+
+        $spreadsheet->setActiveSheetIndex(0);
+        foreach (range('A', 'I') as $col) { $hoja->getColumnDimension($col)->setAutoSize(true); }
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $nombreArchivo = "plantilla_libros.xlsx";
-        $rutaTemp = storage_path("app/{$nombreArchivo}");
-        $writer->save($rutaTemp);
+        $ruta = storage_path('app/plantilla_libros.xlsx');
+        $writer->save($ruta);
 
-        return response()->download($rutaTemp)->deleteFileAfterSend(true);
+        return response()->download($ruta, 'plantilla_libros.xlsx')->deleteFileAfterSend(true);
+    }
+
+    public function plantillaDonaciones()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $hoja = $spreadsheet->getActiveSheet();
+        $hoja->setTitle('Donaciones');
+
+        // Orden exacto que lee importarDonaciones (fila[0]..fila[7])
+        $encabezados = [
+            'clave_carrera',  // fila[0]
+            'cantidad',       // fila[1]
+            'titulo',         // fila[2]
+            'localizacion',   // fila[3]
+            'autor',          // fila[4]
+            'editorial',      // fila[5]
+            'observacion',    // fila[6]
+            'codigo_barras',  // fila[7]
+        ];
+        $hoja->fromArray($encabezados, null, 'A1');
+
+        // Fila de ejemplo
+        $hoja->fromArray([
+            'LNI', 1, 'Legislación Mexicana de Comercio', 'Estante B2',
+            'González Pérez', 'Porrúa', '', '7509876543210',
+        ], null, 'A2');
+
+        // Estilo encabezado
+        $styleHead = [
+            'font'      => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['argb' => 'FF0D1B35']],
+            'alignment' => ['horizontal' => 'center'],
+            'borders'   => ['bottom' => ['borderStyle' => 'thin', 'color' => ['argb' => 'FF7D3C98']]],
+        ];
+        $hoja->getStyle('A1:H1')->applyFromArray($styleHead);
+
+        $hoja->getStyle('A2:H2')->applyFromArray([
+            'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFF4ECF7']],
+            'font' => ['italic' => true, 'color' => ['argb' => 'FF7D3C98']],
+        ]);
+
+        // Hoja de instrucciones
+        $info = $spreadsheet->createSheet();
+        $info->setTitle('Instrucciones');
+        $info->setCellValue('A1', 'INSTRUCCIONES — Plantilla de Importación de Donaciones');
+        $info->setCellValue('A3', 'Columna');
+        $info->setCellValue('B3', 'Campo');
+        $info->setCellValue('C3', 'Descripción');
+        $info->setCellValue('D3', '¿Obligatorio?');
+        $filas = [
+            ['A', 'clave_carrera', 'Clave de la carrera (ej: LNI, IAEV). Si no existe se crea automáticamente.', 'No'],
+            ['B', 'cantidad', 'Número de ejemplares donados. Si se omite, se asume 1.', 'No'],
+            ['C', 'titulo', 'Título completo del libro donado.', 'SÍ'],
+            ['D', 'localizacion', 'Lugar físico donde se colocará el libro.', 'No'],
+            ['E', 'autor', 'Nombre del autor o autores.', 'No'],
+            ['F', 'editorial', 'Editorial del libro.', 'No'],
+            ['G', 'observacion', 'Notas adicionales sobre la donación.', 'No'],
+            ['H', 'codigo_barras', 'Código de barras del libro. Si está vacío se genera uno interno (DON-SIN-CB-...).', 'No'],
+        ];
+        $row = 4;
+        foreach ($filas as $f) {
+            $info->setCellValue("A{$row}", $f[0]);
+            $info->setCellValue("B{$row}", $f[1]);
+            $info->setCellValue("C{$row}", $f[2]);
+            $info->setCellValue("D{$row}", $f[3]);
+            $row++;
+        }
+        $info->getStyle('A1')->applyFromArray(['font' => ['bold' => true, 'size' => 12]]);
+        $info->getStyle('A3:D3')->applyFromArray(['font' => ['bold' => true]]);
+        foreach (['A','B','C','D'] as $col) { $info->getColumnDimension($col)->setAutoSize(true); }
+
+        $spreadsheet->setActiveSheetIndex(0);
+        foreach (range('A', 'H') as $col) { $hoja->getColumnDimension($col)->setAutoSize(true); }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $ruta = storage_path('app/plantilla_donaciones.xlsx');
+        $writer->save($ruta);
+
+        return response()->download($ruta, 'plantilla_donaciones.xlsx')->deleteFileAfterSend(true);
     }
     public function pendientesCodigoBarras(\Illuminate\Http\Request $request)
     {
@@ -240,7 +385,23 @@ class LibroController extends Controller
             'disponible' => $libro->cantidad_disponible,
         ]);
     }
-    public function importarDonacionesForm()
+    public function listarHojas(\Illuminate\Http\Request $request)
+{
+    $request->validate([
+        'archivo' => 'required|file|mimes:xlsx,xls,csv',
+    ]);
+
+    try {
+        $archivo = $request->file('archivo');
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo->getPathname());
+        $hojas = array_map(fn($sheet) => $sheet->getTitle(), $spreadsheet->getAllSheets());
+        return response()->json(['hojas' => $hojas]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'No se pudo leer el archivo: ' . $e->getMessage()], 422);
+    }
+}
+
+public function importarDonacionesForm()
 {
     return view('libros.importar_donaciones');
 }
@@ -396,6 +557,10 @@ public function importarDonacionesAntiguas(\Illuminate\Http\Request $request)
             continue;
         }
 
+        // El formato antiguo no incluye carrera ni cantidad — se usan valores por defecto
+        $carrera_id = null;
+        $cantidad   = 1;
+
         try {
             \DB::transaction(function() use (
                 $carrera_id, $codigoBarras, $titulo, $autor,
@@ -410,8 +575,8 @@ public function importarDonacionesAntiguas(\Illuminate\Http\Request $request)
                     'editorial'           => $editorial ?: 'Sin editorial',
                     'codigo_barras'       => $codigoBarras,
                     'localizacion'        => $localizacion ?: null,
-                    'cantidad_total'      => is_numeric($cantidad) ? (int)$cantidad : 1,
-                    'cantidad_disponible' => is_numeric($cantidad) ? (int)$cantidad : 1,
+                    'cantidad_total'      => $cantidad,
+                    'cantidad_disponible' => $cantidad,
                 ]);
 
                 $codigoDonacion = \App\Models\Donacion::generarCodigo(date('Y'));
@@ -432,7 +597,7 @@ public function importarDonacionesAntiguas(\Illuminate\Http\Request $request)
             });
             $insertados++;
         } catch (\Exception $e) {
-            $errores[] = "Fila " . ($i + 2) . ": " . $e->getMessage();
+            $errores[] = "Fila " . ($i + 3) . ": " . $e->getMessage();
         }
     }
 

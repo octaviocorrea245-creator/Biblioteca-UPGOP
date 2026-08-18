@@ -1,87 +1,94 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Deudores y Rezagados</h2>
-    </x-slot>
+    <x-slot name="header">Deudores y Rezagados</x-slot>
 
-    <div class="py-6 max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+    <style>
+        .section-block { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(13,27,53,.06); overflow:hidden; margin-bottom:1.25rem; }
+        .section-head { display:flex; align-items:center; gap:.75rem; padding:.75rem 1rem; border-bottom:1px solid #F0F4FA; }
+        .section-head h3 { font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; color:#0D1B35; margin:0; }
+        .count-badge { display:inline-block; padding:.15rem .55rem; border-radius:20px; font-size:.72rem; font-weight:700; }
+        .count-yellow { background:#FEF9E7; color:#B7770D; }
+        .count-red    { background:#FDECEA; color:#922B21; }
+        .count-green  { background:#EAFAF1; color:#1E8449; }
+        .empty-msg { padding:1.25rem; text-align:center; font-size:.82rem; color:#27AE60; }
+        table { width:100%; border-collapse:collapse; font-size:.8rem; }
+        thead tr { background:#0D1B35; }
+        thead th { padding:.6rem .85rem; text-align:left; color:rgba(255,255,255,.85); font-weight:600; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+        tbody tr { border-top:1px solid #F0F4FA; transition:background .12s; }
+        tbody tr:hover { background:#F7F9FD; }
+        td { padding:.55rem .85rem; color:#2D3E58; vertical-align:middle; }
+        td.muted { color:#8496B0; font-size:.75rem; }
+        .badge { display:inline-block; padding:.18rem .55rem; border-radius:20px; font-size:.68rem; font-weight:600; }
+        .badge-yellow { background:#FEF9E7; color:#B7770D; }
+        .badge-red    { background:#FDECEA; color:#922B21; }
+    </style>
 
-        {{-- DEUDORES --}}
-        <div class="bg-white shadow rounded p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold text-lg text-yellow-700">
-                    ⚠ Deudores
-                    <span class="ml-2 bg-yellow-100 text-yellow-700 text-sm px-2 py-1 rounded">
-                        {{ $deudores->count() }}
-                    </span>
-                </h3>
-            </div>
-
-            @if($deudores->isEmpty())
-                <p class="text-green-600 text-sm">No hay deudores activos.</p>
-            @else
-            <table class="w-full">
-                <thead class="bg-yellow-50">
-                    <tr>
-                        <th class="p-3 text-left text-sm">Matrícula</th>
-                        <th class="p-3 text-left text-sm">Nombre</th>
-                        <th class="p-3 text-left text-sm">Carrera</th>
-                        <th class="p-3 text-left text-sm">Cuatrimestre</th>
-                        <th class="p-3 text-left text-sm">Préstamos vencidos</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($deudores as $alumno)
-                    <tr class="border-t">
-                        <td class="p-3 text-sm">{{ $alumno->matricula }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->nombre }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->carrera->nombre }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->cuatrimestre }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->prestamos->count() }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @endif
+    {{-- DEUDORES --}}
+    <div class="section-block">
+        <div class="section-head">
+            <svg width="18" height="18" fill="none" stroke="#B7770D" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h3>Deudores</h3>
+            <span class="count-badge count-yellow">{{ $deudores->count() }}</span>
         </div>
+        @if($deudores->isEmpty())
+            <div class="empty-msg">No hay deudores activos.</div>
+        @else
+        <table>
+            <thead>
+                <tr>
+                    <th>Matrícula</th>
+                    <th>Nombre</th>
+                    <th>Carrera</th>
+                    <th>Cuatrimestre</th>
+                    <th>Préstamos vencidos</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($deudores as $a)
+                <tr>
+                    <td class="muted" style="font-family:monospace;">{{ $a->matricula }}</td>
+                    <td style="font-weight:500;">{{ $a->nombre }}</td>
+                    <td class="muted">{{ $a->carrera->nombre }}</td>
+                    <td class="muted" style="text-align:center;">{{ $a->cuatrimestre }}°</td>
+                    <td><span class="badge badge-yellow">{{ $a->prestamos->count() }}</span></td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
+    </div>
 
-        {{-- REZAGADOS --}}
-        <div class="bg-white shadow rounded p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold text-lg text-red-700">
-                    🚫 Rezagados
-                    <span class="ml-2 bg-red-100 text-red-700 text-sm px-2 py-1 rounded">
-                        {{ $rezagados->count() }}
-                    </span>
-                </h3>
-            </div>
-
-            @if($rezagados->isEmpty())
-                <p class="text-green-600 text-sm">No hay rezagados activos.</p>
-            @else
-            <table class="w-full">
-                <thead class="bg-red-50">
-                    <tr>
-                        <th class="p-3 text-left text-sm">Matrícula</th>
-                        <th class="p-3 text-left text-sm">Nombre</th>
-                        <th class="p-3 text-left text-sm">Carrera</th>
-                        <th class="p-3 text-left text-sm">Cuatrimestre</th>
-                        <th class="p-3 text-left text-sm">Préstamos vencidos</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($rezagados as $alumno)
-                    <tr class="border-t">
-                        <td class="p-3 text-sm">{{ $alumno->matricula }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->nombre }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->carrera->nombre }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->cuatrimestre }}</td>
-                        <td class="p-3 text-sm">{{ $alumno->prestamos->count() }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @endif
+    {{-- REZAGADOS --}}
+    <div class="section-block">
+        <div class="section-head">
+            <svg width="18" height="18" fill="none" stroke="#C0392B" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            <h3>Rezagados</h3>
+            <span class="count-badge count-red">{{ $rezagados->count() }}</span>
         </div>
-
+        @if($rezagados->isEmpty())
+            <div class="empty-msg">No hay rezagados activos.</div>
+        @else
+        <table>
+            <thead>
+                <tr>
+                    <th>Matrícula</th>
+                    <th>Nombre</th>
+                    <th>Carrera</th>
+                    <th>Cuatrimestre</th>
+                    <th>Préstamos vencidos</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($rezagados as $a)
+                <tr>
+                    <td class="muted" style="font-family:monospace;">{{ $a->matricula }}</td>
+                    <td style="font-weight:500;">{{ $a->nombre }}</td>
+                    <td class="muted">{{ $a->carrera->nombre }}</td>
+                    <td class="muted" style="text-align:center;">{{ $a->cuatrimestre }}°</td>
+                    <td><span class="badge badge-red">{{ $a->prestamos->count() }}</span></td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
     </div>
 </x-app-layout>

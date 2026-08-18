@@ -37,8 +37,8 @@
                 <td>{{ $d->autor }}</td>
                 <td>{{ $d->alumno_donante }}</td>
                 <td>{{ $d->matricula_donante }}</td>
-                <td>{{ $d->carrera->nombre }}</td>
-                <td>{{ $d->fecha->format('d/m/Y') }}</td>
+                <td>{{ $d->carrera?->nombre ?? '—' }}</td>
+                <td>{{ $d->fecha?->format('d/m/Y') ?? '—' }}</td>
             </tr>
             @empty
             <tr><td colspan="7" style="text-align:center">Sin donaciones.</td></tr>

@@ -81,15 +81,13 @@ class ReposicionController extends Controller
 
         $content = file_get_contents($request->file('xml_file')->getRealPath());
 
-        // Protección XXE: deshabilitar la carga de entidades externas antes de parsear
-        $previousSetting = libxml_disable_entity_loader(true);
+        // Protección XXE: en PHP < 8.1 se deshabilitaba libxml_disable_entity_loader;
+        // desde PHP 8.1+ la función fue eliminada porque libxml2 ≥ 2.9 ya deshabilita
+        // la carga de entidades externas por defecto. LIBXML_NONET previene peticiones de red.
         libxml_use_internal_errors(true);
 
-        // LIBXML_NONET evita que el parser intente hacer peticiones de red
-        // No se usa LIBXML_NOENT para no expandir entidades manualmente
         $xml = simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NONET);
 
-        libxml_disable_entity_loader($previousSetting);
         libxml_clear_errors();
 
         if (!$xml) {

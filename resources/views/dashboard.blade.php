@@ -194,15 +194,6 @@
             <div class="stat-sub sub-blue">registradas</div>
         </a>
 
-        <a href="{{ route('adquisiciones.index') }}" class="stat-card c-green">
-            <div class="stat-icon ic-green">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div>
-            <div class="stat-value">{{ $adquisiciones }}</div>
-            <div class="stat-label">Adquisiciones</div>
-            <div class="stat-sub sub-green">por compra</div>
-        </a>
-
         <a href="{{ route('reposiciones.index') }}" class="stat-card c-orange">
             <div class="stat-icon ic-orange">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -222,70 +213,6 @@
         </a>
     </div>
 
-    <div class="section-divider"></div>
-
-    {{-- Quick access modules --}}
-    <div class="section-title">Acceso rápido</div>
-    <div class="red-bar" style="margin-bottom:1.1rem;"></div>
-
-    <div class="modules-grid">
-        <a href="{{ route('libros.create') }}" class="mod-card">
-            <div class="mod-icon ic-blue">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            </div>
-            <div class="mod-name">Nuevo Libro</div>
-            <div class="mod-desc">Registrar al acervo</div>
-        </a>
-        <a href="{{ route('alumnos.create') }}" class="mod-card">
-            <div class="mod-icon ic-navy">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-            </div>
-            <div class="mod-name">Nuevo Alumno</div>
-            <div class="mod-desc">Registrar alumno</div>
-        </a>
-        <a href="{{ route('prestamos.create') }}" class="mod-card">
-            <div class="mod-icon ic-teal">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-            </div>
-            <div class="mod-name">Nuevo Préstamo</div>
-            <div class="mod-desc">Registrar préstamo</div>
-        </a>
-        <a href="{{ route('donaciones.create') }}" class="mod-card">
-            <div class="mod-icon ic-purple">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            </div>
-            <div class="mod-name">Nueva Donación</div>
-            <div class="mod-desc">Registrar donación</div>
-        </a>
-        <a href="{{ route('adquisiciones.create') }}" class="mod-card">
-            <div class="mod-icon ic-green">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div>
-            <div class="mod-name">Nueva Adquisición</div>
-            <div class="mod-desc">Registrar compra</div>
-        </a>
-        <a href="{{ route('reposiciones.create') }}" class="mod-card">
-            <div class="mod-icon ic-orange">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            </div>
-            <div class="mod-name">Nueva Reposición</div>
-            <div class="mod-desc">Pérdida o daño</div>
-        </a>
-        <a href="{{ route('reportes.index') }}" class="mod-card">
-            <div class="mod-icon" style="background:rgba(13,27,53,.08);color:#0D1B35;">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            </div>
-            <div class="mod-name">Reportes PDF</div>
-            <div class="mod-desc">Generar reportes</div>
-        </a>
-        <a href="{{ route('deudores.index') }}" class="mod-card">
-            <div class="mod-icon ic-red">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div class="mod-name">Deudores</div>
-            <div class="mod-desc">Ver deudores</div>
-        </a>
-    </div>
     <div class="section-divider"></div>
 
     {{-- Préstamos próximos a vencer --}}
